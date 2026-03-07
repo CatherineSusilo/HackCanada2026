@@ -13,17 +13,17 @@ interface StoryScreenProps {
 export function StoryScreen({ profile, onComplete }: StoryScreenProps) {
   const [driftScore, setDriftScore] = useState(0);
   const fullStory = profile.generatedStory || 'Once upon a time...';
-  const [storyText, setStoryText] = useState(fullStory); // Show full story immediately
-  const [currentWordIndex, setCurrentWordIndex] = useState(0);
-  const [currentSegment, setCurrentSegment] = useState('');
+  const paragraphs = fullStory.split('\n').filter(p => p.trim().length > 0);
+  const [currentParagraphIndex, setCurrentParagraphIndex] = useState(0);
+  const [displayedParagraphs, setDisplayedParagraphs] = useState<string[]>([]);
   const [isPlaying, setIsPlaying] = useState(true);
+  const [isSpeaking, setIsSpeaking] = useState(false);
   const [storyTitle] = useState(
     `${profile.name}'s Bedtime Story`
   );
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const [driftHistory, setDriftHistory] = useState<number[]>([0]);
 
-  const storyWords = fullStory.split(' ');
   const startTimeRef = useRef<number>(Date.now());
   const storyPhaseRef = useRef<number>(0);
   const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
@@ -45,53 +45,47 @@ export function StoryScreen({ profile, onComplete }: StoryScreenProps) {
   }, [isPlaying]);
 
   useEffect(() => {
-    if (!isPlaying || currentWordIndex >= storyWords.length) return;
+    if (!isPlaying || currentParagraphIndex >= paragraphs.length || isSpeaking) return;
 
-    const interval = setInterval(() => {
+    const currentParagraph = paragraphs[currentParagraphIndex];
+    
+    // Add paragraph to displayed list
+    setDisplayedParagraphs(prev => [...prev, currentParagraph]);
+    
+    // Speak the paragraph
+    speakParagraph(currentParagraph);
+
+  }, [isPlaying, currentParagraphIndex, paragraphs, isSpeaking]);
+
+  const speakParagraph = (text: string) => {
+    if ('speechSynthesis' in window && text) {
+      window.speechSynthesis.cancel();
+      setIsSpeaking(true);
+
       const newScore = calculateDriftScore(profile.initialState, elapsedSeconds);
       setDriftScore(newScore);
       setDriftHistory((prev) => [...prev, newScore]);
 
-      // Display words progressively based on drift score
-      // Higher drift score = slower word reveal
-      const wordsPerInterval = Math.max(1, Math.floor(5 - newScore / 25));
-      const nextIndex = Math.min(currentWordIndex + wordsPerInterval, storyWords.length);
-      const newWords = storyWords.slice(currentWordIndex, nextIndex).join(' ');
-      
-      setCurrentWordIndex(nextIndex);
-      setStoryText((prev) => prev + (prev ? ' ' : '') + newWords);
-      setCurrentSegment(newWords);
-
-      // Speak the new segment
-      if (newWords) {
-        speakSegment(newWords, newScore);
-      }
-
-      storyPhaseRef.current += 1;
-
-      // Complete when drift score is high or story is finished
-      if (newScore >= 85 || nextIndex >= storyWords.length) {
-        setTimeout(() => {
-          completeStory();
-        }, 5000);
-      }
-    }, 3000); // Reveal words every 3 seconds
-
-    return () => clearInterval(interval);
-  }, [isPlaying, elapsedSeconds, currentWordIndex, profile, storyWords]);
-
-  const speakSegment = (text: string, score: number) => {
-    if ('speechSynthesis' in window && text) {
-      window.speechSynthesis.cancel();
-
       const utterance = new SpeechSynthesisUtterance(text);
-      utterance.rate = Math.max(0.6, 1.0 - score / 200);
-      utterance.volume = Math.max(0.4, 1.0 - score / 150);
-      utterance.pitch = Math.max(0.8, 1.0 - score / 400);
+      utterance.rate = Math.max(0.6, 1.0 - newScore / 200);
+      utterance.volume = Math.max(0.4, 1.0 - newScore / 150);
+      utterance.pitch = Math.max(0.8, 1.0 - newScore / 400);
 
       const voices = window.speechSynthesis.getVoices();
       const voice = voices.find(v => v.lang.startsWith('en')) || voices[0];
       if (voice) utterance.voice = voice;
+
+      utterance.onend = () => {
+        setIsSpeaking(false);
+        setCurrentParagraphIndex(prev => prev + 1);
+        
+        // Check if story is complete
+        if (currentParagraphIndex >= paragraphs.length - 1 || newScore >= 85) {
+          setTimeout(() => {
+            completeStory();
+          }, 2000);
+        }
+      };
 
       utteranceRef.current = utterance;
       window.speechSynthesis.speak(utterance);
@@ -166,9 +160,16 @@ export function StoryScreen({ profile, onComplete }: StoryScreenProps) {
 
           <div className="bg-white/5 backdrop-blur-sm rounded-2xl p-8 border border-white/10">
             <div className="prose prose-invert max-w-none">
-              <p className="text-indigo-100 leading-relaxed whitespace-pre-wrap">
-                {storyText || 'Loading your story...'}
-              </p>
+              {displayedParagraphs.map((paragraph, index) => (
+                <p key={index} className="text-indigo-100 leading-relaxed mb-4">
+                  {paragraph}
+                </p>
+              ))}
+              {displayedParagraphs.length === 0 && (
+                <p className="text-indigo-100 leading-relaxed">
+                  Loading your story...
+                </p>
+              )}
             </div>
           </div>
 
