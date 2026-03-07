@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Moon, Sparkles } from 'lucide-react';
+import { Moon, Sparkles, Upload, X } from 'lucide-react';
 import type { ChildProfile } from '../App';
 
 interface SetupScreenProps {
@@ -9,21 +9,34 @@ interface SetupScreenProps {
 export function SetupScreen({ onStart }: SetupScreenProps) {
   const [name, setName] = useState('');
   const [age, setAge] = useState('6');
-  const [favoriteAnimal, setFavoriteAnimal] = useState('');
-  const [favoritePlace, setFavoritePlace] = useState('');
+  const [storytellingTone, setStorytellingTone] = useState<'calming' | 'energetic' | 'sad' | 'adventurous' | 'none'>('calming');
+  const [parentPrompt, setParentPrompt] = useState('');
+  const [uploadedImages, setUploadedImages] = useState<File[]>([]);
   const [initialState, setInitialState] = useState<'wound-up' | 'normal' | 'almost-there'>('normal');
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (name && favoriteAnimal && favoritePlace) {
+    if (name && parentPrompt) {
       onStart({
         name,
         age: parseInt(age),
-        favoriteAnimal,
-        favoritePlace,
+        storytellingTone,
+        parentPrompt,
+        uploadedImages,
         initialState,
       });
     }
+  };
+
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files) {
+      const newFiles = Array.from(e.target.files);
+      setUploadedImages([...uploadedImages, ...newFiles]);
+    }
+  };
+
+  const removeImage = (index: number) => {
+    setUploadedImages(uploadedImages.filter((_, i) => i !== index));
   };
 
   return (
@@ -65,27 +78,67 @@ export function SetupScreen({ onStart }: SetupScreenProps) {
             </div>
 
             <div>
-              <label className="block text-white mb-2">Favorite Animal</label>
-              <input
-                type="text"
-                value={favoriteAnimal}
-                onChange={(e) => setFavoriteAnimal(e.target.value)}
-                className="w-full px-4 py-3 rounded-lg bg-white/20 border border-white/30 text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-indigo-400"
-                placeholder="Fox"
+              <label className="block text-white mb-2">Storytelling Tone</label>
+              <select
+                value={storytellingTone}
+                onChange={(e) => setStorytellingTone(e.target.value as any)}
+                className="w-full px-4 py-3 rounded-lg bg-white/20 border border-white/30 text-white focus:outline-none focus:ring-2 focus:ring-indigo-400"
+                required
+              >
+                <option value="calming" className="bg-indigo-900">Calming</option>
+                <option value="energetic" className="bg-indigo-900">Energetic</option>
+                <option value="sad" className="bg-indigo-900">Sad</option>
+                <option value="adventurous" className="bg-indigo-900">Adventurous</option>
+                <option value="none" className="bg-indigo-900">None (Neutral)</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-white mb-2">Story Prompt (for parents)</label>
+              <textarea
+                value={parentPrompt}
+                onChange={(e) => setParentPrompt(e.target.value)}
+                className="w-full px-4 py-3 rounded-lg bg-white/20 border border-white/30 text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-indigo-400 min-h-[100px] resize-y"
+                placeholder="Describe the story you'd like... (e.g., 'A journey through a magical forest with talking animals')"
                 required
               />
             </div>
 
             <div>
-              <label className="block text-white mb-2">Favorite Place</label>
-              <input
-                type="text"
-                value={favoritePlace}
-                onChange={(e) => setFavoritePlace(e.target.value)}
-                className="w-full px-4 py-3 rounded-lg bg-white/20 border border-white/30 text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-indigo-400"
-                placeholder="Forest"
-                required
-              />
+              <label className="block text-white mb-2">Upload Child's Drawings (optional)</label>
+              <div className="space-y-3">
+                <label className="w-full px-4 py-3 rounded-lg bg-white/20 border border-white/30 text-white/80 hover:bg-white/30 transition-all cursor-pointer flex items-center justify-center gap-2">
+                  <Upload className="w-5 h-5" />
+                  <span>Choose Images</span>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    multiple
+                    onChange={handleImageUpload}
+                    className="hidden"
+                  />
+                </label>
+                {uploadedImages.length > 0 && (
+                  <div className="grid grid-cols-3 gap-2">
+                    {uploadedImages.map((file, index) => (
+                      <div key={index} className="relative group">
+                        <img
+                          src={URL.createObjectURL(file)}
+                          alt={`Upload ${index + 1}`}
+                          className="w-full h-20 object-cover rounded-lg border border-white/30"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => removeImage(index)}
+                          className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                        >
+                          <X className="w-3 h-3" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
 
             <div>

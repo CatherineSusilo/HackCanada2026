@@ -13,33 +13,47 @@ export function generateStorySegment({
   phase,
   elapsedSeconds,
 }: StorySegmentParams): string {
-  const { name, favoriteAnimal, favoritePlace } = profile;
+  const { name, parentPrompt, storytellingTone } = profile;
+  
+  // Use the parent's prompt as the story theme
+  const storyTheme = parentPrompt || 'a magical adventure';
+
+  // Tone-based story modifiers
+  const toneModifiers = {
+    calming: { pace: 'slowly and gently', atmosphere: 'peaceful and serene', feeling: 'calm and safe' },
+    energetic: { pace: 'with excitement', atmosphere: 'vibrant and lively', feeling: 'excited and adventurous' },
+    sad: { pace: 'thoughtfully', atmosphere: 'gentle and reflective', feeling: 'understood and comforted' },
+    adventurous: { pace: 'with wonder', atmosphere: 'mysterious and enchanting', feeling: 'curious and brave' },
+    none: { pace: 'naturally', atmosphere: 'comfortable', feeling: 'content' },
+  };
+  
+  const tone = toneModifiers[storytellingTone];
 
   const segments: Record<string, string[]> = {
     introduction: [
-      `Once upon a time, in the heart of the ${favoritePlace}, there lived a young ${favoriteAnimal} named Luna.`,
-      `Luna had soft fur that shimmered in the moonlight, and bright eyes full of curiosity.`,
-      `One peaceful evening, Luna decided to explore a part of the ${favoritePlace} she had never seen before.`,
+      `Once upon a time, ${name} embarked on ${storyTheme}. The world around them felt ${tone.atmosphere}.`,
+      `${name} discovered something wonderful ahead. They moved ${tone.pace}, feeling ${tone.feeling}.`,
+      `In this special moment, ${name} began their journey. Everything seemed ${tone.atmosphere} and inviting.`,
     ],
     rising: [
-      `As Luna wandered deeper into the ${favoritePlace}, she noticed how the trees seemed to whisper gentle secrets.`,
-      `The air was warm and carried the scent of wildflowers. Luna felt safe and content.`,
-      `She came across a clearing bathed in silver moonlight, where the grass was soft as clouds.`,
+      `As ${name} continued, the world around them became even more ${tone.atmosphere}.`,
+      `${name} felt ${tone.feeling} as they explored deeper into the experience.`,
+      `The journey was unfolding ${tone.pace}, revealing beautiful moments one by one.`,
     ],
     settling: [
-      `Luna lay down in the grass and looked up at the stars. They twinkled like tiny lanterns in the sky.`,
-      `A gentle breeze rustled through the leaves, creating a soft, soothing melody.`,
-      `Luna's eyes began to feel heavy. The world around her seemed to slow down, becoming peaceful and still.`,
+      `${name} found a peaceful place to rest. The world felt ${tone.atmosphere} and welcoming.`,
+      `Everything around ${name} moved ${tone.pace}, creating a soothing rhythm.`,
+      `${name}'s mind began to quiet, feeling ${tone.feeling} in this moment.`,
     ],
     drifting: [
-      `The stars above grew brighter, and Luna felt herself becoming lighter, as if floating on a soft cloud.`,
-      `Everything in the ${favoritePlace} was quiet now. Even the breeze had settled to a gentle whisper.`,
-      `Luna's breathing slowed. She felt warm, safe, and perfectly at peace.`,
+      `The world around ${name} grew softer. Everything moved ${tone.pace} now.`,
+      `${name} felt ${tone.feeling}, wrapped in comfort and peace.`,
+      `Time seemed to slow. ${name} let themselves drift into this ${tone.atmosphere} space.`,
     ],
     resolution: [
-      `Luna closed her eyes and smiled. She had found the most wonderful place in all the ${favoritePlace}.`,
-      `The moon watched over her as she curled up, tucked her nose under her tail, and let the night embrace her.`,
-      `And there, under the stars, Luna drifted into the softest, most peaceful sleep. The ${favoritePlace} was quiet. The world was still. Everything was exactly as it should be.`,
+      `${name} closed their eyes and smiled. This had been a beautiful journey.`,
+      `The world around ${name} was ${tone.atmosphere}. Everything was perfect.`,
+      `And there, ${name} drifted into the softest, most peaceful sleep. All was well.`,
     ],
   };
 

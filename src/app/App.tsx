@@ -8,8 +8,9 @@ export type AppState = 'setup' | 'story' | 'summary';
 export interface ChildProfile {
   name: string;
   age: number;
-  favoriteAnimal: string;
-  favoritePlace: string;
+  storytellingTone: 'calming' | 'energetic' | 'sad' | 'adventurous' | 'none';
+  parentPrompt: string;
+  uploadedImages: File[];
   initialState: 'wound-up' | 'normal' | 'almost-there';
 }
 
