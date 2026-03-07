@@ -1,5 +1,4 @@
 import { motion } from 'motion/react';
-import { Sparkles, Moon, CloudMoon } from 'lucide-react';
 
 interface DriftMeterProps {
   score: number;
@@ -9,79 +8,120 @@ export function DriftMeter({ score }: DriftMeterProps) {
   const getPhaseInfo = (score: number) => {
     if (score < 25) {
       return {
-        label: 'Wound Up',
-        color: 'from-yellow-400 to-orange-500',
-        icon: Sparkles,
-        description: 'Full of energy',
+        label: 'wound up',
+        color: 'rgba(180, 120, 60, 0.6)',
+        emoji: '⚡',
+        description: 'full of energy',
       };
     } else if (score < 50) {
       return {
-        label: 'Settling',
-        color: 'from-blue-400 to-indigo-500',
-        icon: CloudMoon,
-        description: 'Starting to relax',
+        label: 'settling',
+        color: 'rgba(120, 140, 180, 0.6)',
+        emoji: '🌤️',
+        description: 'starting to relax',
       };
     } else if (score < 75) {
       return {
-        label: 'Drifting',
-        color: 'from-indigo-500 to-purple-600',
-        icon: Moon,
-        description: 'Getting sleepy',
+        label: 'drifting',
+        color: 'rgba(140, 120, 180, 0.6)',
+        emoji: '🌙',
+        description: 'getting sleepy',
       };
     } else {
       return {
-        label: 'Almost Gone',
-        color: 'from-purple-700 to-indigo-900',
-        icon: Moon,
-        description: 'Nearly asleep',
+        label: 'almost gone',
+        color: 'rgba(100, 80, 140, 0.7)',
+        emoji: '😴',
+        description: 'nearly asleep',
       };
     }
   };
 
   const phase = getPhaseInfo(score);
-  const Icon = phase.icon;
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between text-white">
+      <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <Icon className="w-5 h-5 text-indigo-300" />
-          <span>{phase.label}</span>
+          <span style={{ fontSize: '24px' }}>{phase.emoji}</span>
+          <span style={{ fontFamily: "'Indie Flower', cursive", fontSize: '20px', color: 'rgba(20, 15, 10, 0.85)' }}>
+            {phase.label}
+          </span>
         </div>
-        <span className="text-sm text-indigo-300">{phase.description}</span>
+        <span style={{ fontFamily: "'Patrick Hand', cursive", fontSize: '15px', color: 'rgba(30, 20, 15, 0.6)' }}>
+          {phase.description}
+        </span>
       </div>
 
-      <div className="relative h-4 bg-white/10 rounded-full overflow-hidden backdrop-blur-sm border border-white/20">
+      <div 
+        className="relative h-5 overflow-hidden"
+        style={{
+          background: 'rgba(250, 245, 235, 0.4)',
+          border: '2px solid rgba(40, 30, 20, 0.3)',
+          boxShadow: 'inset 0 2px 4px rgba(0, 0, 0, 0.1)',
+          borderRadius: '10px',
+        }}
+      >
         <motion.div
-          className={`h-full bg-gradient-to-r ${phase.color} rounded-full`}
+          className="h-full"
+          style={{
+            background: phase.color,
+            boxShadow: '0 0 8px rgba(0, 0, 0, 0.2)',
+          }}
           initial={{ width: 0 }}
           animate={{ width: `${score}%` }}
           transition={{ duration: 1, ease: 'easeOut' }}
         />
         <div className="absolute inset-0 flex items-center justify-center">
-          <span className="text-xs text-white mix-blend-difference">
+          <span 
+            className="text-sm font-bold drop-shadow-lg" 
+            style={{ 
+              color: 'rgba(20, 15, 10, 0.9)',
+              textShadow: '0 1px 2px rgba(255, 255, 255, 0.5)',
+              fontFamily: "'Patrick Hand', cursive",
+            }}
+          >
             {Math.round(score)}%
           </span>
         </div>
       </div>
 
       <div className="grid grid-cols-4 gap-2 text-xs">
-        <div className={`text-center p-2 rounded ${score >= 0 ? 'bg-white/10' : 'bg-white/5'}`}>
-          <div className="text-yellow-300">0-25</div>
-          <div className="text-white/60">Active</div>
-        </div>
-        <div className={`text-center p-2 rounded ${score >= 25 ? 'bg-white/10' : 'bg-white/5'}`}>
-          <div className="text-blue-300">25-50</div>
-          <div className="text-white/60">Calm</div>
-        </div>
-        <div className={`text-center p-2 rounded ${score >= 50 ? 'bg-white/10' : 'bg-white/5'}`}>
-          <div className="text-purple-300">50-75</div>
-          <div className="text-white/60">Drowsy</div>
-        </div>
-        <div className={`text-center p-2 rounded ${score >= 75 ? 'bg-white/10' : 'bg-white/5'}`}>
-          <div className="text-indigo-300">75-100</div>
-          <div className="text-white/60">Sleep</div>
-        </div>
+        {[
+          { range: '0-25', label: 'active', emoji: '⚡', min: 0, max: 25 },
+          { range: '25-50', label: 'calm', emoji: '😊', min: 25, max: 50 },
+          { range: '50-75', label: 'drowsy', emoji: '🌙', min: 50, max: 75 },
+          { range: '75-100', label: 'sleep', emoji: '😴', min: 75, max: 100 },
+        ].map((phase) => {
+          const isActive = score >= phase.min && score < phase.max;
+          return (
+            <div 
+              key={phase.range}
+              className="text-center p-2.5 transition-all"
+              style={{
+                background: isActive ? 'rgba(210, 180, 140, 0.4)' : 'rgba(250, 245, 235, 0.3)',
+                border: isActive ? '2px solid rgba(40, 30, 20, 0.4)' : '1px solid rgba(40, 30, 20, 0.2)',
+                boxShadow: isActive ? '0 2px 6px rgba(0, 0, 0, 0.12)' : '0 1px 3px rgba(0, 0, 0, 0.08)',
+              }}
+            >
+              <div style={{ 
+                fontFamily: "'Patrick Hand', cursive", 
+                fontSize: '14px', 
+                color: 'rgba(20, 15, 10, 0.85)',
+                fontWeight: isActive ? 'bold' : 'normal',
+              }}>
+                {phase.emoji} {phase.range}
+              </div>
+              <div style={{ 
+                fontFamily: "'Patrick Hand', cursive", 
+                fontSize: '11px', 
+                color: 'rgba(30, 20, 15, 0.6)',
+              }}>
+                {phase.label}
+              </div>
+            </div>
+          );
+        })}
       </div>
     </div>
   );
