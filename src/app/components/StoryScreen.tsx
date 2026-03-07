@@ -152,24 +152,23 @@ export function StoryScreen({ profile, onComplete }: StoryScreenProps) {
         </div>
       </div>
 
-      <div className="flex-1 overflow-auto p-6 relative">
-        <div className="max-w-4xl mx-auto h-full flex flex-col">
-          <div className="mb-8">
-            <DriftMeter score={driftScore} />
+      <div className="flex-1 overflow-auto p-6 relative flex flex-col">
+        <div className="mb-8">
+          <DriftMeter score={driftScore} />
+        </div>
+
+        {/* Spacer to push content to bottom */}
+        <div className="flex-1"></div>
+
+        {/* Subtitle-style text at absolute bottom */}
+        <div className="mt-auto">
+          <div className="bg-black/50 backdrop-blur-sm rounded-lg px-6 py-4 border border-white/20 shadow-2xl mb-4">
+            <p className="text-white text-center text-sm leading-relaxed">
+              {currentParagraph || 'Loading your story...'}
+            </p>
           </div>
 
-          <div className="flex-1"></div>
-
-          {/* Subtitle-style text at bottom */}
-          <div className="mb-8">
-            <div className="bg-black/80 backdrop-blur-sm rounded-lg px-8 py-6 border border-white/20 shadow-2xl">
-              <p className="text-white text-center text-xl leading-relaxed font-medium">
-                {currentParagraph || 'Loading your story...'}
-              </p>
-            </div>
-          </div>
-
-          <div className="flex justify-center pb-4">
+          <div className="flex justify-center pb-2">
             <button
               onClick={togglePlayPause}
               className="px-6 py-3 bg-white/10 hover:bg-white/20 text-white rounded-full border border-white/20 transition-all flex items-center gap-2"
