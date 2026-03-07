@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Moon, Pause, Play } from 'lucide-react';
+import { Moon, Pause, Play, Info, X } from 'lucide-react';
 import type { ChildProfile, StorySummary } from '../App';
 import { DriftMeter } from './DriftMeter';
 import { generateStorySegment } from '../utils/storyGenerator';
@@ -19,6 +19,7 @@ export function StoryScreen({ profile, onComplete }: StoryScreenProps) {
   const [backgroundImage, setBackgroundImage] = useState('');
   const [isPlaying, setIsPlaying] = useState(true);
   const [isSpeaking, setIsSpeaking] = useState(false);
+  const [isPanelOpen, setIsPanelOpen] = useState(false);
   const [storyTitle] = useState(
     `${profile.name}'s Bedtime Story`
   );
@@ -179,7 +180,7 @@ export function StoryScreen({ profile, onComplete }: StoryScreenProps) {
   };
 
   return (
-    <div className="size-full flex flex-col">
+    <div className="w-full h-full flex flex-col">
       <div 
         className="flex-none backdrop-blur-sm border-b border-white/10 px-6 py-4"
         style={{
@@ -205,12 +206,14 @@ export function StoryScreen({ profile, onComplete }: StoryScreenProps) {
       </div>
 
       <div 
-        className="flex-1 overflow-auto p-6 relative flex flex-col"
+        className="flex-1 p-6 relative flex flex-col"
         style={{
           backgroundImage: backgroundImage ? `linear-gradient(rgba(15, 13, 38, 0.4), rgba(15, 13, 38, 0.5)), url(${backgroundImage})` : 'linear-gradient(rgb(15 13 38), rgb(15 13 38))',
           backgroundSize: 'cover',
           backgroundPosition: 'center',
-          transition: 'background-image 1s ease-in-out'
+          backgroundRepeat: 'no-repeat',
+          transition: 'background-image 1s ease-in-out',
+          minHeight: 0
         }}
       >
         <div className="mb-8">
