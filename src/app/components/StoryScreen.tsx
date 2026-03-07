@@ -181,30 +181,46 @@ export function StoryScreen({ profile, onComplete }: StoryScreenProps) {
 
   return (
     <div className="w-full h-full flex flex-col">
-      <div 
-        className="flex-none backdrop-blur-sm border-b border-white/10 px-6 py-4"
-        style={{
-          backgroundImage: backgroundImage ? `linear-gradient(rgba(30, 27, 75, 0.3), rgba(30, 27, 75, 0.3)), url(${backgroundImage})` : 'linear-gradient(to right, rgb(49 46 129 / 0.5), rgb(88 28 135 / 0.5))',
-          backgroundSize: 'cover',
-          backgroundPosition: 'center',
-          transition: 'background-image 1s ease-in-out'
-        }}
+      {/* Info button - fixed position top right */}
+      <button
+        onClick={() => setIsPanelOpen(!isPanelOpen)}
+        className="fixed top-4 right-4 z-50 w-12 h-12 bg-white/10 hover:bg-white/20 backdrop-blur-md text-white rounded-full border border-white/20 transition-all flex items-center justify-center shadow-lg"
       >
-        <div className="max-w-4xl mx-auto flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <Moon className="w-6 h-6 text-indigo-300" />
-            <div>
-              <h2 className="text-white">{storyTitle}</h2>
-              <p className="text-indigo-300 text-sm">{profile.name}'s bedtime story</p>
+        {isPanelOpen ? <X className="w-5 h-5" /> : <Info className="w-5 h-5" />}
+      </button>
+
+      {/* Collapsible info panel */}
+      {isPanelOpen && (
+        <div className="fixed top-20 right-4 z-40 w-80 bg-black/70 backdrop-blur-xl rounded-lg border border-white/20 shadow-2xl overflow-hidden animate-in slide-in-from-top-5">
+          <div className="p-6">
+            <div className="flex items-center gap-3 mb-4">
+              <Moon className="w-6 h-6 text-indigo-300" />
+              <div>
+                <h2 className="text-white font-semibold">{storyTitle}</h2>
+                <p className="text-indigo-300 text-sm">{profile.name}'s bedtime story</p>
+              </div>
+            </div>
+            
+            <div className="space-y-3 pt-4 border-t border-white/10">
+              <div className="flex justify-between items-center">
+                <span className="text-indigo-300 text-sm">Time Elapsed</span>
+                <span className="text-white font-medium">{formatTime(elapsedSeconds)}</span>
+              </div>
+              
+              <div className="flex justify-between items-center">
+                <span className="text-indigo-300 text-sm">Drift Score</span>
+                <span className="text-white font-medium">{Math.round(driftScore)}</span>
+              </div>
+
+              <div className="pt-3 border-t border-white/10">
+                <DriftMeter score={driftScore} />
+              </div>
             </div>
           </div>
-          <div className="text-right">
-            <div className="text-white">{formatTime(elapsedSeconds)}</div>
-            <div className="text-indigo-300 text-sm">Drift Score: {Math.round(driftScore)}</div>
-          </div>
         </div>
-      </div>
+      )}
 
+      {/* Main content area with background */}
       <div 
         className="flex-1 p-6 relative flex flex-col"
         style={{
@@ -216,10 +232,6 @@ export function StoryScreen({ profile, onComplete }: StoryScreenProps) {
           minHeight: 0
         }}
       >
-        <div className="mb-8">
-          <DriftMeter score={driftScore} />
-        </div>
-
         {/* Spacer to push content to bottom */}
         <div className="flex-1"></div>
 

@@ -60,8 +60,8 @@ export function SetupScreen({ onStart }: SetupScreenProps) {
   };
 
   return (
-    <div className="size-full flex items-center justify-center p-6">
-      <div className="w-full max-w-md">
+    <div className="min-h-full w-full flex items-center justify-center p-6 overflow-auto">
+      <div className="w-full max-w-md my-8">
         <div className="text-center mb-8">
           <div className="flex items-center justify-center gap-2 mb-4">
             <Moon className="w-10 h-10 text-indigo-300" />

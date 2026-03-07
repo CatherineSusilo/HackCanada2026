@@ -44,7 +44,7 @@ export default function App() {
   };
 
   return (
-    <div className="size-full bg-gradient-to-br from-indigo-950 via-purple-900 to-slate-900">
+    <div className="min-h-full w-full bg-gradient-to-br from-indigo-950 via-purple-900 to-slate-900">
       {appState === 'setup' && <SetupScreen onStart={handleStartStory} />}
       {appState === 'story' && childProfile && (
         <StoryScreen profile={childProfile} onComplete={handleStoryComplete} />
