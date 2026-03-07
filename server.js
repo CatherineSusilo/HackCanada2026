@@ -38,7 +38,7 @@ app.post('/api/generate-story', async (req, res) => {
       'almost-there': 'The child is already very sleepy. Use extremely gentle, peaceful language from the start.',
     };
 
-    const prompt = `You are a master bedtime storyteller. Generate a beautiful, engaging bedtime story that is approximately 500 words long.
+    const prompt = `You are a master bedtime storyteller. Generate a beautiful, engaging bedtime story that is approximately 250 words long.
 
 Child's Details:
 - Name: ${profile.name}
@@ -49,7 +49,7 @@ Child's Details:
 Story Theme/Prompt from Parent: ${profile.parentPrompt}
 
 Requirements:
-1. Make the story exactly around 500 words
+1. Make the story exactly around 250 words
 2. Include ${profile.name} as the main character
 3. Follow the ${profile.storytellingTone} tone throughout
 4. Base the story on this theme: "${profile.parentPrompt}"
@@ -62,6 +62,7 @@ Requirements:
 8. The story should gradually become more peaceful and slower-paced as it progresses
 9. End with ${profile.name} feeling safe, content, and ready for sleep
 10. Do not include a title, just the story text
+11. IMPORTANT: Break the story into short paragraphs of ONLY 1-2 sentences each. Each paragraph should be separated by a newline. This is crucial for pacing and narration.
 
 Generate the story now:`;
 

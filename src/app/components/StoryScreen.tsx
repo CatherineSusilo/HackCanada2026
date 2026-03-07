@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { Moon, Pause, Play, Info, X } from 'lucide-react';
 import type { ChildProfile, StorySummary } from '../App';
 import { DriftMeter } from './DriftMeter';
+import VitalsMonitor from './VitalsMonitor';
 import { generateStorySegment } from '../utils/storyGenerator';
 import { calculateDriftScore } from '../utils/driftCalculator';
 
@@ -25,6 +26,8 @@ export function StoryScreen({ profile, onComplete }: StoryScreenProps) {
   );
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const [driftHistory, setDriftHistory] = useState<number[]>([0]);
+  const [vitalsConnected, setVitalsConnected] = useState(false);
+  const [vitalsSleepiness, setVitalsSleepiness] = useState(0);
 
   const imagePromptsRef = useRef<any[]>((window as any).storyImagePrompts || []);
   const startTimeRef = useRef<number>(Date.now());
@@ -100,12 +103,32 @@ export function StoryScreen({ profile, onComplete }: StoryScreenProps) {
     // Speak the paragraph
     speakParagraph(paragraph);
 
-  }, [isPlaying, currentParagraphIndex, paragraphs, isSpeaking]);
+  }, [ishandleVitalsUpdate = (sleepiness: number, isAsleep: boolean) => {
+    setVitalsConnected(true);
+    setVitalsSleepiness(sleepiness);
+    
+    // If vitals show child is asleep, boost drift score
+    if (isAsleep) {
+      const boostedScore = Math.min(100, driftScore + 20);
+      setDriftScore(boostedScore);
+      setDriftHistory((prev) => [...prev, boostedScore]);
+    }
+  };
 
   const speakParagraph = (text: string) => {
     if ('speechSynthesis' in window && text) {
       window.speechSynthesis.cancel();
       setIsSpeaking(true);
+
+      // Calculate drift score, optionally boosted by vitals data
+      let newScore = calculateDriftScore(profile.initialState, elapsedSeconds);
+      
+      // If vitals are connected, blend the scores
+      if (vitalsConnected) {
+        const vitalsScore = vitalsSleepiness * 100;
+        newScore = (newScore * 0.6) + (vitalsScore * 0.4); // 60% time-based, 40% vitals-based
+      }
+      
 
       const newScore = calculateDriftScore(profile.initialState, elapsedSeconds);
       setDriftScore(newScore);
@@ -195,6 +218,11 @@ export function StoryScreen({ profile, onComplete }: StoryScreenProps) {
           <div className="p-6">
             <div className="flex items-center gap-3 mb-4">
               <Moon className="w-6 h-6 text-indigo-300" />
+
+              {/* Vitals Monitor */}
+              <div className="pt-3 border-t border-white/10">
+                <VitalsMonitor onVitalsUpdate={handleVitalsUpdate} />
+              </div>
               <div>
                 <h2 className="text-white font-semibold">{storyTitle}</h2>
                 <p className="text-indigo-300 text-sm">{profile.name}'s bedtime story</p>
@@ -222,14 +250,13 @@ export function StoryScreen({ profile, onComplete }: StoryScreenProps) {
 
       {/* Main content area with background */}
       <div 
-        className="flex-1 p-6 relative flex flex-col"
+        className="flex-1 p-6 relative flex flex-col min-h-screen"
         style={{
           backgroundImage: backgroundImage ? `linear-gradient(rgba(15, 13, 38, 0.4), rgba(15, 13, 38, 0.5)), url(${backgroundImage})` : 'linear-gradient(rgb(15 13 38), rgb(15 13 38))',
           backgroundSize: 'cover',
           backgroundPosition: 'center',
           backgroundRepeat: 'no-repeat',
-          transition: 'background-image 1s ease-in-out',
-          minHeight: 0
+          transition: 'background-image 1s ease-in-out'
         }}
       >
         {/* Spacer to push content to bottom */}
