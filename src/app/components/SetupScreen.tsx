@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Upload, X, Loader2, ArrowLeft } from 'lucide-react';
 import type { ChildProfile } from '../App';
-import { generateFullStory } from '../utils/geminiApi';
+import { useApi } from '../../lib/api';
 
 interface SetupScreenProps {
   onStart: (profile: ChildProfile) => void;
@@ -16,6 +16,7 @@ interface SetupScreenProps {
 }
 
 export function SetupScreen({ onStart, onBack, prefilledConfig }: SetupScreenProps) {
+  const api = useApi();
   const [name, setName] = useState(prefilledConfig?.childName || '');
   const [age, setAge] = useState(prefilledConfig?.childAge.toString() || '6');
   const [storytellingTone, setStorytellingTone] = useState<'calming' | 'energetic' | 'sad' | 'adventurous' | 'none'>('calming');
@@ -42,11 +43,12 @@ export function SetupScreen({ onStart, onBack, prefilledConfig }: SetupScreenPro
           initialState,
         };
         
-        const generatedStory = await generateFullStory({ profile });
+        const data = await api.generateStory(profile);
+        (window as any).storyImagePrompts = data.imagePrompts || [];
         
         onStart({
           ...profile,
-          generatedStory,
+          generatedStory: data.story,
         });
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to generate story. Please try again.');

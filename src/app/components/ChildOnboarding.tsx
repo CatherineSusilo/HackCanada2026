@@ -400,21 +400,31 @@ export function ChildOnboarding({ onComplete, onBack }: ChildOnboardingProps) {
 
     setIsSubmitting(true);
     try {
-      await api.createChild({
+      const childPreferences = {
+        storytellingTone: 'calming',
+        favoriteThemes: [
+          ...(data.favoriteShows?.split(',').map(s => s.trim()).filter(s => s) || []),
+          ...(data.favoriteBooks?.split(',').map(s => s.trim()).filter(s => s) || []),
+        ],
+        defaultInitialState: data.energyLevel === 'high' ? 'wound-up' : data.energyLevel === 'low' ? 'almost-there' : 'normal',
+        personality: `Energy: ${data.energyLevel}. Social: ${data.socialPreference}. Emotions: ${data.emotionalExpression}. Adaptability: ${data.adaptability}. Curiosity: ${data.curiosity}. Attention: ${data.attention}. Bedtime: ${data.bedtimeResistance}.`,
+        favoriteMedia: `Shows: ${data.favoriteShows || 'none'}. Books: ${data.favoriteBooks || 'none'}. Characters: ${data.favoriteCharacters || 'none'}. Activities: ${data.favoriteActivities || 'none'}.`,
+        parentGoals: `Primary: ${data.primaryGoal}. Secondary: ${data.secondaryGoals?.join(', ') || 'none'}. Struggles: ${data.sleepStruggles?.join(', ') || 'none'}. Success: ${data.successLooksLike}. Concerns: ${data.concernAreas || 'none'}. Bedtime: ${data.currentBedtime}. Naps: ${data.napSchedule}. Environment: ${data.sleepEnvironment || 'not specified'}.`,
+      };
+
+      const child = await api.createChild({
         name: data.name!,
         age: parseInt(data.age!),
-        preferences: {
-          storytellingTone: 'calming',
-          favoriteThemes: [
-            ...(data.favoriteShows?.split(',').map(s => s.trim()).filter(s => s) || []),
-            ...(data.favoriteBooks?.split(',').map(s => s.trim()).filter(s => s) || []),
-          ],
-          defaultInitialState: data.energyLevel === 'high' ? 'wound-up' : data.energyLevel === 'low' ? 'almost-there' : 'normal',
-          personality: `Energy: ${data.energyLevel}. Social: ${data.socialPreference}. Emotions: ${data.emotionalExpression}. Adaptability: ${data.adaptability}. Curiosity: ${data.curiosity}. Attention: ${data.attention}. Bedtime: ${data.bedtimeResistance}.`,
-          favoriteMedia: `Shows: ${data.favoriteShows || 'none'}. Books: ${data.favoriteBooks || 'none'}. Characters: ${data.favoriteCharacters || 'none'}. Activities: ${data.favoriteActivities || 'none'}.`,
-          parentGoals: `Primary: ${data.primaryGoal}. Secondary: ${data.secondaryGoals?.join(', ') || 'none'}. Struggles: ${data.sleepStruggles?.join(', ') || 'none'}. Success: ${data.successLooksLike}. Concerns: ${data.concernAreas || 'none'}. Bedtime: ${data.currentBedtime}. Naps: ${data.napSchedule}. Environment: ${data.sleepEnvironment || 'not specified'}.`,
-        },
+        preferences: childPreferences,
       });
+      
+      // Store child data in localStorage for story generation
+      localStorage.setItem(`child_${child.id}`, JSON.stringify({
+        id: child.id,
+        name: child.name,
+        age: child.age,
+        preferences: childPreferences,
+      }));
       
       onComplete();
     } catch (error) {

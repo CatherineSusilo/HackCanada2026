@@ -4,7 +4,7 @@ interface GenerateStoryParams {
   profile: ChildProfile;
 }
 
-const API_URL = 'http://localhost:3001/api/generate-story';
+const API_URL = 'http://localhost:3001/api/generate/story';
 
 export async function generateFullStory({ profile }: GenerateStoryParams): Promise<string> {
   console.log('Sending request to story generation server...');

@@ -102,5 +102,41 @@ export const useApi = () => {
     getStoryStats: (childId: string, days = 30) => 
       fetchWithAuth(`/statistics/stories/${childId}?days=${days}`),
     getInsights: (childId: string) => fetchWithAuth(`/statistics/insights/${childId}`),
+
+    // Audio
+    generateAudio: async (text: string, voiceId?: string) => {
+      const token = await getAccessTokenSilently({
+        authorizationParams: {
+          audience: import.meta.env.VITE_AUTH0_AUDIENCE,
+          scope: 'openid profile email',
+        }
+      });
+
+      const response = await fetch(`${API_URL}/audio`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ text, voiceId }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to generate audio');
+      }
+
+      return response.blob();
+    },
+    getVoices: () => fetchWithAuth('/audio/voices'),
+
+    // Story generation
+    generateStory: (profile: any) => fetchWithAuth('/generate/story', {
+      method: 'POST',
+      body: JSON.stringify({ profile }),
+    }),
+    generateImage: (prompt: string) => fetchWithAuth('/generate/image', {
+      method: 'POST',
+      body: JSON.stringify({ prompt }),
+    }),
   };
 };

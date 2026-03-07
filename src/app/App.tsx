@@ -8,6 +8,12 @@ import { StoryRoadmap } from './components/StoryRoadmap';
 import { SetupScreen } from './components/SetupScreen';
 import { StoryScreen } from './components/StoryScreen';
 import { SummaryScreen } from './components/SummaryScreen';
+import { Sidebar, SidebarView } from './components/Sidebar';
+import { BehavioralStats } from './components/BehavioralStats';
+import { StoryArchive } from './components/StoryArchive';
+import { DrawingsManager } from './components/DrawingsManager';
+import { StoryThemes } from './components/StoryThemes';
+import { AISettings } from './components/AISettings';
 
 export type AppState = 'dashboard' | 'onboarding' | 'roadmap' | 'setup' | 'story' | 'summary';
 
@@ -33,6 +39,7 @@ export interface StorySummary {
 export default function App() {
   const { isAuthenticated, isLoading, user, getAccessTokenSilently } = useAuth0();
   const [appState, setAppState] = useState<AppState>('dashboard');
+  const [sidebarView, setSidebarView] = useState<SidebarView>('dashboard');
   const [selectedChild, setSelectedChild] = useState<any>(null);
   const [storyConfig, setStoryConfig] = useState<any>(null);
   const [childProfile, setChildProfile] = useState<ChildProfile | null>(null);
@@ -94,10 +101,20 @@ export default function App() {
 
   const handleBackToDashboard = () => {
     setAppState('dashboard');
+    setSidebarView('dashboard');
     setSelectedChild(null);
     setStoryConfig(null);
     setChildProfile(null);
     setStorySummary(null);
+  };
+
+  const handleSidebarViewChange = (view: SidebarView) => {
+    setSidebarView(view);
+    if (view === 'dashboard') {
+      setAppState('dashboard');
+      setSelectedChild(null);
+      setStoryConfig(null);
+    }
   };
 
   const handleBackToRoadmap = () => {
@@ -146,7 +163,32 @@ export default function App() {
   // Main app (authenticated)
   return (
     <>
-      {appState === 'dashboard' && <ChildDashboard onSelectChild={handleSelectChild} onAddChild={handleStartOnboarding} />}
+      {/* Show sidebar for all views except story and summary */}
+      {appState !== 'story' && appState !== 'summary' && (
+        <Sidebar currentView={sidebarView} onViewChange={handleSidebarViewChange} />
+      )}
+
+      {/* Sidebar Views */}
+      {sidebarView === 'dashboard' && appState === 'dashboard' && (
+        <ChildDashboard onSelectChild={handleSelectChild} onAddChild={handleStartOnboarding} />
+      )}
+      {sidebarView === 'statistics' && (
+        <BehavioralStats onBack={() => setSidebarView('dashboard')} />
+      )}
+      {sidebarView === 'archive' && (
+        <StoryArchive onBack={() => setSidebarView('dashboard')} />
+      )}
+      {sidebarView === 'drawings' && (
+        <DrawingsManager onBack={() => setSidebarView('dashboard')} />
+      )}
+      {sidebarView === 'themes' && (
+        <StoryThemes onBack={() => setSidebarView('dashboard')} />
+      )}
+      {sidebarView === 'ai-settings' && (
+        <AISettings onBack={() => setSidebarView('dashboard')} />
+      )}
+
+      {/* Flow Views */}
       {appState === 'onboarding' && (
         <ChildOnboarding 
           onComplete={handleOnboardingComplete}

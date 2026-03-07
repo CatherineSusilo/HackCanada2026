@@ -7,7 +7,7 @@ const router = Router();
 
 // Schema for creating a story session
 const createStorySchema = z.object({
-  childId: z.string().uuid(),
+  childId: z.string().min(1),
   storyTitle: z.string().min(1),
   storyContent: z.string().min(1),
   parentPrompt: z.string().min(1),

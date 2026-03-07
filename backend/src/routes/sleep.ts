@@ -7,7 +7,7 @@ const router = Router();
 
 // Schema for creating a sleep session
 const createSleepSchema = z.object({
-  childId: z.string().uuid(),
+  childId: z.string().min(1),
   bedtime: z.string().datetime(),
   wakeupTime: z.string().datetime().optional(),
   quality: z.enum(['poor', 'fair', 'good', 'excellent']).optional(),
@@ -17,7 +17,7 @@ const createSleepSchema = z.object({
   sleepEfficiency: z.number().min(0).max(100).optional(),
   weatherCondition: z.string().optional(),
   roomTemperature: z.number().optional(),
-  storySessionId: z.string().uuid().optional(),
+  storySessionId: z.string().min(1).optional(),
 });
 
 // Schema for updating a sleep session

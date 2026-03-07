@@ -18,6 +18,8 @@ import childrenRoutes from './routes/children';
 import storyRoutes from './routes/stories';
 import sleepRoutes from './routes/sleep';
 import statisticsRoutes from './routes/statistics';
+import audioRoutes from './routes/audio';
+import generateRoutes from './routes/generate';
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -47,6 +49,8 @@ app.use('/api/children', authMiddleware, childrenRoutes);
 app.use('/api/stories', authMiddleware, storyRoutes);
 app.use('/api/sleep', authMiddleware, sleepRoutes);
 app.use('/api/statistics', authMiddleware, statisticsRoutes);
+app.use('/api/audio', authMiddleware, audioRoutes);
+app.use('/api/generate', authMiddleware, generateRoutes);
 
 // Error handling
 app.use(errorHandler);
@@ -56,10 +60,17 @@ app.use((req, res) => {
   res.status(404).json({ error: 'Route not found' });
 });
 
-app.listen(PORT, () => {
+const server = app.listen(PORT, () => {
   console.log(`🚀 StoryDrift API server running on http://localhost:${PORT}`);
   console.log(`📊 Environment: ${process.env.NODE_ENV || 'development'}`);
   console.log(`🔐 Auth0 Domain: ${process.env.AUTH0_DOMAIN}`);
 });
+
+const shutdown = () => {
+  server.close(() => process.exit(0));
+  setTimeout(() => process.exit(1), 3000);
+};
+process.on('SIGTERM', shutdown);
+process.on('SIGINT', shutdown);
 
 export default app;
