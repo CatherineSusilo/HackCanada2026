@@ -15,7 +15,7 @@ export function StoryScreen({ profile, onComplete }: StoryScreenProps) {
   const fullStory = profile.generatedStory || 'Once upon a time...';
   const paragraphs = fullStory.split('\n').filter(p => p.trim().length > 0);
   const [currentParagraphIndex, setCurrentParagraphIndex] = useState(0);
-  const [displayedParagraphs, setDisplayedParagraphs] = useState<string[]>([]);
+  const [currentParagraph, setCurrentParagraph] = useState('');
   const [isPlaying, setIsPlaying] = useState(true);
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [storyTitle] = useState(
@@ -47,13 +47,13 @@ export function StoryScreen({ profile, onComplete }: StoryScreenProps) {
   useEffect(() => {
     if (!isPlaying || currentParagraphIndex >= paragraphs.length || isSpeaking) return;
 
-    const currentParagraph = paragraphs[currentParagraphIndex];
+    const paragraph = paragraphs[currentParagraphIndex];
     
-    // Add paragraph to displayed list
-    setDisplayedParagraphs(prev => [...prev, currentParagraph]);
+    // Set current paragraph (replaces previous)
+    setCurrentParagraph(paragraph);
     
     // Speak the paragraph
-    speakParagraph(currentParagraph);
+    speakParagraph(paragraph);
 
   }, [isPlaying, currentParagraphIndex, paragraphs, isSpeaking]);
 
@@ -152,28 +152,24 @@ export function StoryScreen({ profile, onComplete }: StoryScreenProps) {
         </div>
       </div>
 
-      <div className="flex-1 overflow-auto p-6">
-        <div className="max-w-4xl mx-auto">
+      <div className="flex-1 overflow-auto p-6 relative">
+        <div className="max-w-4xl mx-auto h-full flex flex-col">
           <div className="mb-8">
             <DriftMeter score={driftScore} />
           </div>
 
-          <div className="bg-white/5 backdrop-blur-sm rounded-2xl p-8 border border-white/10">
-            <div className="prose prose-invert max-w-none">
-              {displayedParagraphs.map((paragraph, index) => (
-                <p key={index} className="text-indigo-100 leading-relaxed mb-4">
-                  {paragraph}
-                </p>
-              ))}
-              {displayedParagraphs.length === 0 && (
-                <p className="text-indigo-100 leading-relaxed">
-                  Loading your story...
-                </p>
-              )}
+          <div className="flex-1"></div>
+
+          {/* Subtitle-style text at bottom */}
+          <div className="mb-8">
+            <div className="bg-black/80 backdrop-blur-sm rounded-lg px-8 py-6 border border-white/20 shadow-2xl">
+              <p className="text-white text-center text-xl leading-relaxed font-medium">
+                {currentParagraph || 'Loading your story...'}
+              </p>
             </div>
           </div>
 
-          <div className="mt-6 flex justify-center">
+          <div className="flex justify-center pb-4">
             <button
               onClick={togglePlayPause}
               className="px-6 py-3 bg-white/10 hover:bg-white/20 text-white rounded-full border border-white/20 transition-all flex items-center gap-2"
