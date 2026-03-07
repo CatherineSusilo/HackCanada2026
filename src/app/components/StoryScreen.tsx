@@ -12,15 +12,18 @@ interface StoryScreenProps {
 
 export function StoryScreen({ profile, onComplete }: StoryScreenProps) {
   const [driftScore, setDriftScore] = useState(0);
-  const [storyText, setStoryText] = useState('');
+  const fullStory = profile.generatedStory || 'Once upon a time...';
+  const [storyText, setStoryText] = useState(fullStory); // Show full story immediately
+  const [currentWordIndex, setCurrentWordIndex] = useState(0);
   const [currentSegment, setCurrentSegment] = useState('');
   const [isPlaying, setIsPlaying] = useState(true);
   const [storyTitle] = useState(
-    `The ${profile.favoriteAnimal} of ${profile.favoritePlace}`
+    `${profile.name}'s Bedtime Story`
   );
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const [driftHistory, setDriftHistory] = useState<number[]>([0]);
 
+  const storyWords = fullStory.split(' ');
   const startTimeRef = useRef<number>(Date.now());
   const storyPhaseRef = useRef<number>(0);
   const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
@@ -42,36 +45,40 @@ export function StoryScreen({ profile, onComplete }: StoryScreenProps) {
   }, [isPlaying]);
 
   useEffect(() => {
-    if (!isPlaying) return;
+    if (!isPlaying || currentWordIndex >= storyWords.length) return;
 
-    const generateInterval = setInterval(() => {
+    const interval = setInterval(() => {
       const newScore = calculateDriftScore(profile.initialState, elapsedSeconds);
       setDriftScore(newScore);
       setDriftHistory((prev) => [...prev, newScore]);
 
-      const segment = generateStorySegment({
-        profile,
-        driftScore: newScore,
-        phase: storyPhaseRef.current,
-        elapsedSeconds,
-      });
+      // Display words progressively based on drift score
+      // Higher drift score = slower word reveal
+      const wordsPerInterval = Math.max(1, Math.floor(5 - newScore / 25));
+      const nextIndex = Math.min(currentWordIndex + wordsPerInterval, storyWords.length);
+      const newWords = storyWords.slice(currentWordIndex, nextIndex).join(' ');
+      
+      setCurrentWordIndex(nextIndex);
+      setStoryText((prev) => prev + (prev ? ' ' : '') + newWords);
+      setCurrentSegment(newWords);
 
-      setCurrentSegment(segment);
-      setStoryText((prev) => prev + ' ' + segment);
-
-      speakSegment(segment, newScore);
+      // Speak the new segment
+      if (newWords) {
+        speakSegment(newWords, newScore);
+      }
 
       storyPhaseRef.current += 1;
 
-      if (newScore >= 85) {
+      // Complete when drift score is high or story is finished
+      if (newScore >= 85 || nextIndex >= storyWords.length) {
         setTimeout(() => {
           completeStory();
-        }, 8000);
+        }, 5000);
       }
-    }, 8000);
+    }, 3000); // Reveal words every 3 seconds
 
-    return () => clearInterval(generateInterval);
-  }, [isPlaying, elapsedSeconds, profile]);
+    return () => clearInterval(interval);
+  }, [isPlaying, elapsedSeconds, currentWordIndex, profile, storyWords]);
 
   const speakSegment = (text: string, score: number) => {
     if ('speechSynthesis' in window && text) {
@@ -160,7 +167,7 @@ export function StoryScreen({ profile, onComplete }: StoryScreenProps) {
           <div className="bg-white/5 backdrop-blur-sm rounded-2xl p-8 border border-white/10">
             <div className="prose prose-invert max-w-none">
               <p className="text-indigo-100 leading-relaxed whitespace-pre-wrap">
-                {storyText || 'Once upon a time...'}
+                {storyText || 'Loading your story...'}
               </p>
             </div>
           </div>

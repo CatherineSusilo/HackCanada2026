@@ -1,6 +1,7 @@
 import { useState } from 'react';
-import { Moon, Sparkles, Upload, X } from 'lucide-react';
+import { Moon, Sparkles, Upload, X, Loader2 } from 'lucide-react';
 import type { ChildProfile } from '../App';
+import { generateFullStory } from '../utils/geminiApi';
 
 interface SetupScreenProps {
   onStart: (profile: ChildProfile) => void;
@@ -13,18 +14,37 @@ export function SetupScreen({ onStart }: SetupScreenProps) {
   const [parentPrompt, setParentPrompt] = useState('');
   const [uploadedImages, setUploadedImages] = useState<File[]>([]);
   const [initialState, setInitialState] = useState<'wound-up' | 'normal' | 'almost-there'>('normal');
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (name && parentPrompt) {
-      onStart({
-        name,
-        age: parseInt(age),
-        storytellingTone,
-        parentPrompt,
-        uploadedImages,
-        initialState,
-      });
+      setIsGenerating(true);
+      setError(null);
+      
+      try {
+        const profile: ChildProfile = {
+          name,
+          age: parseInt(age),
+          storytellingTone,
+          parentPrompt,
+          uploadedImages,
+          initialState,
+        };
+        
+        // Generate the story using Gemini API
+        const generatedStory = await generateFullStory({ profile });
+        
+        // Pass the profile with the generated story
+        onStart({
+          ...profile,
+          generatedStory,
+        });
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Failed to generate story. Please try again.');
+        setIsGenerating(false);
+      }
     }
   };
 
@@ -183,11 +203,25 @@ export function SetupScreen({ onStart }: SetupScreenProps) {
               </div>
             </div>
 
+            {error && (
+              <div className="p-4 bg-red-500/20 border border-red-500/50 rounded-lg text-red-200 text-sm">
+                {error}
+              </div>
+            )}
+
             <button
               type="submit"
-              className="w-full px-6 py-4 bg-gradient-to-r from-indigo-500 to-purple-600 text-white rounded-lg hover:from-indigo-600 hover:to-purple-700 transition-all shadow-lg hover:shadow-xl"
+              disabled={isGenerating}
+              className="w-full px-6 py-4 bg-gradient-to-r from-indigo-500 to-purple-600 text-white rounded-lg hover:from-indigo-600 hover:to-purple-700 transition-all shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
             >
-              Begin Tonight's Story
+              {isGenerating ? (
+                <>
+                  <Loader2 className="w-5 h-5 animate-spin" />
+                  <span>Generating your story...</span>
+                </>
+              ) : (
+                <span>Begin Tonight's Story</span>
+              )}
             </button>
           </div>
         </form>

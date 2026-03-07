@@ -12,6 +12,7 @@ export interface ChildProfile {
   parentPrompt: string;
   uploadedImages: File[];
   initialState: 'wound-up' | 'normal' | 'almost-there';
+  generatedStory?: string;
 }
 
 export interface StorySummary {
