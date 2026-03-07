@@ -16,6 +16,7 @@ export function StoryScreen({ profile, onComplete }: StoryScreenProps) {
   const paragraphs = fullStory.split('\n').filter(p => p.trim().length > 0);
   const [currentParagraphIndex, setCurrentParagraphIndex] = useState(0);
   const [currentParagraph, setCurrentParagraph] = useState('');
+  const [backgroundImage, setBackgroundImage] = useState('');
   const [isPlaying, setIsPlaying] = useState(true);
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [storyTitle] = useState(
@@ -24,6 +25,7 @@ export function StoryScreen({ profile, onComplete }: StoryScreenProps) {
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const [driftHistory, setDriftHistory] = useState<number[]>([0]);
 
+  const imagePromptsRef = useRef<any[]>((window as any).storyImagePrompts || []);
   const startTimeRef = useRef<number>(Date.now());
   const storyPhaseRef = useRef<number>(0);
   const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
@@ -32,6 +34,12 @@ export function StoryScreen({ profile, onComplete }: StoryScreenProps) {
     const initialScore = calculateDriftScore(profile.initialState, 0);
     setDriftScore(initialScore);
     setDriftHistory([initialScore]);
+    
+    // Debug: log image prompts
+    console.log('Image prompts available:', imagePromptsRef.current.length);
+    if (imagePromptsRef.current.length > 0) {
+      console.log('First image prompt:', imagePromptsRef.current[0]);
+    }
   }, [profile.initialState]);
 
   useEffect(() => {
@@ -51,6 +59,42 @@ export function StoryScreen({ profile, onComplete }: StoryScreenProps) {
     
     // Set current paragraph (replaces previous)
     setCurrentParagraph(paragraph);
+    
+    // Update background image based on paragraph - generate with Flux
+    const imagePrompt = imagePromptsRef.current[currentParagraphIndex];
+    console.log(`Paragraph ${currentParagraphIndex}: imagePrompt =`, imagePrompt);
+    
+    if (imagePrompt) {
+      // Generate image using Flux via backend
+      fetch('http://localhost:3001/api/generate-image', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          prompt: imagePrompt.prompt,
+          paragraphIndex: currentParagraphIndex
+        }),
+      })
+      .then(res => res.json())
+      .then(data => {
+        if (data.imageUrl) {
+          console.log('✓ Generated image URL:', data.imageUrl);
+          setBackgroundImage(data.imageUrl);
+        }
+      })
+      .catch(error => {
+        console.error('Failed to generate image:', error);
+        // Fallback to a static image
+        const fallbackPhotos = [
+          '1519681393784-d120267933ba',
+          '1444703851336-926a91bfc5f1',
+          '1464822759023-fed622ff2c3b'
+        ];
+        const photoId = fallbackPhotos[currentParagraphIndex % fallbackPhotos.length];
+        setBackgroundImage(`https://images.unsplash.com/photo-${photoId}?w=1920&h=1080&fit=crop`);
+      });
+    }
     
     // Speak the paragraph
     speakParagraph(paragraph);
@@ -136,7 +180,15 @@ export function StoryScreen({ profile, onComplete }: StoryScreenProps) {
 
   return (
     <div className="size-full flex flex-col">
-      <div className="flex-none bg-gradient-to-r from-indigo-900/50 to-purple-900/50 backdrop-blur-sm border-b border-white/10 px-6 py-4">
+      <div 
+        className="flex-none backdrop-blur-sm border-b border-white/10 px-6 py-4"
+        style={{
+          backgroundImage: backgroundImage ? `linear-gradient(rgba(30, 27, 75, 0.3), rgba(30, 27, 75, 0.3)), url(${backgroundImage})` : 'linear-gradient(to right, rgb(49 46 129 / 0.5), rgb(88 28 135 / 0.5))',
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
+          transition: 'background-image 1s ease-in-out'
+        }}
+      >
         <div className="max-w-4xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-3">
             <Moon className="w-6 h-6 text-indigo-300" />
@@ -152,7 +204,15 @@ export function StoryScreen({ profile, onComplete }: StoryScreenProps) {
         </div>
       </div>
 
-      <div className="flex-1 overflow-auto p-6 relative flex flex-col">
+      <div 
+        className="flex-1 overflow-auto p-6 relative flex flex-col"
+        style={{
+          backgroundImage: backgroundImage ? `linear-gradient(rgba(15, 13, 38, 0.4), rgba(15, 13, 38, 0.5)), url(${backgroundImage})` : 'linear-gradient(rgb(15 13 38), rgb(15 13 38))',
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
+          transition: 'background-image 1s ease-in-out'
+        }}
+      >
         <div className="mb-8">
           <DriftMeter score={driftScore} />
         </div>

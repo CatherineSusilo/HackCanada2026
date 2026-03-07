@@ -25,6 +25,10 @@ export async function generateFullStory({ profile }: GenerateStoryParams): Promi
 
     const data = await response.json();
     console.log(`✓ Story generated successfully using ${data.modelUsed}`);
+    
+    // Store image prompts globally for use in StoryScreen
+    (window as any).storyImagePrompts = data.imagePrompts || [];
+    
     return data.story;
     
   } catch (error: any) {
