@@ -37,7 +37,7 @@ export function Sidebar({ currentView, onViewChange }: SidebarProps) {
       {/* Toggle Button */}
       <motion.button
         onClick={() => setIsOpen(!isOpen)}
-        className="fixed top-6 left-6 z-50 p-3 cursor-pointer transition-all"
+        className="fixed top-4 left-4 z-50 p-2.5 sm:p-3 sm:top-6 sm:left-6 cursor-pointer transition-all"
         style={{
           background: 'rgba(250, 245, 235, 0.95)',
           border: '2px solid rgba(40, 30, 20, 0.3)',
@@ -48,9 +48,9 @@ export function Sidebar({ currentView, onViewChange }: SidebarProps) {
         whileTap={{ scale: 0.95 }}
       >
         {isOpen ? (
-          <X className="w-6 h-6" style={{ color: 'rgba(20, 15, 10, 0.8)' }} />
+          <X className="w-5 h-5 sm:w-6 sm:h-6" style={{ color: 'rgba(20, 15, 10, 0.8)' }} />
         ) : (
-          <Menu className="w-6 h-6" style={{ color: 'rgba(20, 15, 10, 0.8)' }} />
+          <Menu className="w-5 h-5 sm:w-6 sm:h-6" style={{ color: 'rgba(20, 15, 10, 0.8)' }} />
         )}
       </motion.button>
 
@@ -76,7 +76,7 @@ export function Sidebar({ currentView, onViewChange }: SidebarProps) {
             animate={{ x: 0 }}
             exit={{ x: -320 }}
             transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-            className="fixed left-0 top-0 bottom-0 z-40 w-80 p-6 pt-24"
+            className="fixed left-0 top-0 bottom-0 z-40 w-[85vw] max-w-80 p-4 pt-20 sm:p-6 sm:pt-24"
             style={{
               background: 'rgba(228, 213, 183, 0.98)',
               backgroundImage: 'url(https://www.toptal.com/designers/subtlepatterns/patterns/old_map.png)',

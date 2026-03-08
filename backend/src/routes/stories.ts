@@ -18,6 +18,7 @@ const createStorySchema = z.object({
   generatedImages: z.array(z.string()).optional(),
   interactions: z.any().optional(),
   modelUsed: z.string().optional(),
+  characterIds: z.array(z.string()).optional(),
 });
 
 // Schema for updating/completing a story session
@@ -171,8 +172,23 @@ router.post('/', async (req: AuthRequest, res) => {
         interactions: body.interactions || [],
         modelUsed: body.modelUsed,
         driftScoreHistory: [body.initialDriftScore],
+        characterIds: body.characterIds || [],
       },
     });
+
+    if (body.characterIds && body.characterIds.length > 0) {
+      for (const charId of body.characterIds) {
+        try {
+          await prisma.character.update({
+            where: { id: charId },
+            data: {
+              storyIds: { push: story.id },
+              totalStories: { increment: 1 },
+            },
+          });
+        } catch {}
+      }
+    }
 
     res.status(201).json(story);
   } catch (error) {
@@ -228,6 +244,23 @@ router.patch('/:storyId', async (req: AuthRequest, res) => {
         interactions: body.interactions,
       },
     });
+
+    if (body.completed && existingStory.characterIds?.length > 0 && body.finalDriftScore != null && body.initialDriftScore != null) {
+      const storyEngagement = Math.min(100, Math.max(0, body.finalDriftScore - existingStory.initialDriftScore));
+      for (const charId of existingStory.characterIds) {
+        try {
+          const char = await prisma.character.findUnique({ where: { id: charId }, select: { engagementScore: true, totalStories: true } });
+          if (char) {
+            const n = char.totalStories || 1;
+            const newScore = (char.engagementScore * (n - 1) + storyEngagement) / n;
+            await prisma.character.update({
+              where: { id: charId },
+              data: { engagementScore: Math.round(newScore * 10) / 10 },
+            });
+          }
+        } catch {}
+      }
+    }
 
     res.json(story);
   } catch (error) {

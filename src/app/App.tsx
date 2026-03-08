@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useAuth0 } from '@auth0/auth0-react';
 import { Loader2 } from 'lucide-react';
+import { useApi } from '../lib/api';
 import { LoginScreen } from './components/LoginScreen';
 import { ChildDashboard } from './components/ChildDashboard';
 import { ChildOnboarding } from './components/ChildOnboarding';
@@ -17,7 +18,7 @@ import { AISettings } from './components/AISettings';
 import { CharacterManager } from './components/CharacterManager';
 import { getNextTheme } from './data/roadmapThemes';
 
-export type AppState = 'dashboard' | 'onboarding' | 'roadmap' | 'setup' | 'story' | 'summary';
+export type AppState = 'dashboard' | 'onboarding' | 'roadmap' | 'setup' | 'story' | 'summary' | 'generating-next';
 
 export interface StoryCharacter {
   id: string;
@@ -26,6 +27,11 @@ export interface StoryCharacter {
   personality: string;
   icon: string;
   voiceId?: string;
+}
+
+export interface CharacterVoice {
+  name: string;
+  voiceId: string;
 }
 
 export interface ChildProfile {
@@ -39,6 +45,9 @@ export interface ChildProfile {
   interactionFrequency: 'none' | 'every' | 'every3' | 'every5';
   storyLength: 'short' | 'medium' | 'long';
   characters: StoryCharacter[];
+  characterVoices?: CharacterVoice[];
+  characterIds?: string[];
+  backgroundMusic?: boolean;
   generatedStory?: string;
   interactions?: any[];
 }
@@ -53,6 +62,7 @@ export interface StorySummary {
 
 export default function App() {
   const { isAuthenticated, isLoading, user, getAccessTokenSilently } = useAuth0();
+  const api = useApi();
   const [appState, setAppState] = useState<AppState>('dashboard');
   const [sidebarView, setSidebarView] = useState<SidebarView>('dashboard');
   const [selectedChild, setSelectedChild] = useState<any>(null);
@@ -109,9 +119,48 @@ export default function App() {
     setAppState('story');
   };
 
-  const handleStoryComplete = (summary: StorySummary) => {
+  const handleStoryComplete = async (summary: StorySummary) => {
     setStorySummary(summary);
-    setAppState('summary');
+    const next = storyConfig ? getNextTheme(storyConfig.theme) : null;
+    if (next && childProfile) {
+      setStoryConfig({
+        ...storyConfig!,
+        theme: next.title,
+        themeDescription: next.theme,
+      });
+      setAppState('generating-next');
+      setIsGeneratingNext(true);
+      try {
+        const nextProfile: ChildProfile = {
+          ...childProfile,
+          parentPrompt: `${next.title}: ${next.theme}`,
+        };
+        const data = await api.generateStory(nextProfile);
+        (window as any).storyImagePrompts = data.imagePrompts || [];
+        setChildProfile({
+          ...nextProfile,
+          generatedStory: data.story,
+          interactions: data.interactions || [],
+          characterVoices: data.characterVoices || [],
+          characterIds: data.characterIds || [],
+        });
+        setAppState('story');
+      } catch (err) {
+        console.error('Failed to generate next story:', err);
+        setAppState('summary');
+      } finally {
+        setIsGeneratingNext(false);
+      }
+    } else if (next) {
+      setStoryConfig({
+        ...storyConfig!,
+        theme: next.title,
+        themeDescription: next.theme,
+      });
+      setAppState('setup');
+    } else {
+      setAppState('summary');
+    }
   };
 
   const handleBackToDashboard = () => {
@@ -236,6 +285,18 @@ export default function App() {
         <Sidebar currentView={sidebarView} onViewChange={handleSidebarViewChange} />
         <StoryRoadmap child={selectedChild} onStartStory={handleStartStory} onBack={handleBackToDashboard} />
       </>
+    );
+  }
+
+  if (appState === 'generating-next') {
+    return (
+      <div className="size-full flex flex-col items-center justify-center" style={{ background: 'linear-gradient(135deg, #1e1b4b 0%, #312e81 50%, #1e293b 100%)' }}>
+        <Loader2 className="w-16 h-16 animate-spin text-indigo-300 mb-4" />
+        <p style={{ fontFamily: "'Patrick Hand', cursive", fontSize: '24px', color: 'rgba(255,255,255,0.9)' }}>
+          creating the next story...
+        </p>
+        <link href="https://fonts.googleapis.com/css2?family=Patrick+Hand&display=swap" rel="stylesheet" />
+      </div>
     );
   }
 

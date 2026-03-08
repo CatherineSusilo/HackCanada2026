@@ -10,14 +10,14 @@ export function calculateDriftScore(
 
   const startScore = startScores[initialState];
 
-  const targetDuration = 480;
+  const targetDuration = 900;
   const progress = Math.min(elapsedSeconds / targetDuration, 1);
 
   const easedProgress = easeInOutCubic(progress);
 
   const score = startScore + (100 - startScore) * easedProgress;
 
-  const noise = Math.sin(elapsedSeconds * 0.1) * 2;
+  const noise = Math.sin(elapsedSeconds * 0.05) * 1;
 
   return Math.min(100, Math.max(0, score + noise));
 }

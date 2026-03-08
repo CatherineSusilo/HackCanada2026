@@ -289,15 +289,39 @@ router.get('/insights/:childId', async (req: AuthRequest, res) => {
       where: { childId },
     });
 
-    // ── Compute avgEngagement from drift score improvement ──
+    // ── Compute avgEngagement from drift + vitals (saved simulated or real) ──
     const completedStories = recentStories.filter(s => s.completed);
     let avgEngagement = '—';
+    let avgStimulation = '—';
     if (completedStories.length > 0) {
-      const maxPossible = 100; // drift score is 0-100
-      const avgImprovement = completedStories
-        .reduce((sum, s) => sum + (s.finalDriftScore - s.initialDriftScore), 0) / completedStories.length;
-      const engagementPct = Math.min(100, Math.max(0, Math.round((avgImprovement / maxPossible) * 100)));
-      avgEngagement = `${engagementPct}%`;
+      const engagementScores: number[] = [];
+      const stimulationScores: number[] = [];
+      for (const s of completedStories) {
+        const driftEngagement = Math.min(100, Math.max(0, s.finalDriftScore - s.initialDriftScore));
+        let engagement = driftEngagement;
+        const vitals = s.vitalsHistory as Array<{ pulseRate?: number; breathingRate?: number; timestamp?: string }> | null;
+        if (vitals && Array.isArray(vitals) && vitals.length >= 2) {
+          const firstPulse = vitals.slice(0, Math.min(5, vitals.length)).reduce((a, v) => a + (v.pulseRate || 0), 0) / Math.min(5, vitals.length);
+          const lastPulse = vitals.slice(-Math.min(5, vitals.length)).reduce((a, v) => a + (v.pulseRate || 0), 0) / Math.min(5, vitals.length);
+          const firstBreath = vitals.slice(0, Math.min(5, vitals.length)).reduce((a, v) => a + (v.breathingRate || 0), 0) / Math.min(5, vitals.length);
+          const lastBreath = vitals.slice(-Math.min(5, vitals.length)).reduce((a, v) => a + (v.breathingRate || 0), 0) / Math.min(5, vitals.length);
+          const pulseDrop = Math.max(0, firstPulse - lastPulse);
+          const breathDrop = Math.max(0, firstBreath - lastBreath);
+          const vitalsEngagement = Math.min(100, (pulseDrop / 15) * 30 + (breathDrop / 4) * 20);
+          engagement = Math.min(100, driftEngagement * 0.5 + vitalsEngagement * 0.5);
+        }
+        engagementScores.push(engagement);
+        const interactions = s.interactions as Array<{ response?: unknown }> | null;
+        const responded = interactions?.filter(i => i.response != null).length ?? 0;
+        const total = Math.max(1, interactions?.length ?? 0);
+        stimulationScores.push(Math.round((responded / total) * 100));
+      }
+      const avgEng = engagementScores.reduce((a, b) => a + b, 0) / engagementScores.length;
+      const avgStim = stimulationScores.length > 0
+        ? stimulationScores.reduce((a, b) => a + b, 0) / stimulationScores.length
+        : 0;
+      avgEngagement = `${Math.round(avgEng)}%`;
+      avgStimulation = Number.isFinite(avgStim) ? `${Math.round(avgStim)}%` : '—';
     }
 
     // ── Compute favoriteThemes from preferences + parent prompts ──
@@ -370,10 +394,23 @@ router.get('/insights/:childId', async (req: AuthRequest, res) => {
         }
       }
     }
-    const favoriteCharacters = Object.entries(charFreq)
+    let favoriteCharacters = Object.entries(charFreq)
       .sort((a, b) => b[1] - a[1])
       .slice(0, 3)
       .map(([char]) => char);
+
+    const charIdsFromStories = [...new Set(recentStories.flatMap(s => (s.characterIds || []) as string[]))];
+    if (charIdsFromStories.length > 0) {
+      const chars = await prisma.character.findMany({
+        where: { id: { in: charIdsFromStories }, userId: user.id },
+        select: { name: true, engagementScore: true },
+        orderBy: { engagementScore: 'desc' },
+      });
+      const topByEngagement = chars.filter(c => (c.engagementScore ?? 0) > 0).slice(0, 3).map(c => c.name);
+      if (topByEngagement.length > 0) {
+        favoriteCharacters = [...new Set([...topByEngagement, ...favoriteCharacters])].slice(0, 3);
+      }
+    }
 
     // ── Compute learningInsight from patterns ──
     let learningInsight = '';
@@ -490,6 +527,7 @@ router.get('/insights/:childId', async (req: AuthRequest, res) => {
       childId,
       childName: child.name,
       avgEngagement,
+      avgStimulation,
       favoriteThemes,
       favoriteCharacters,
       learningInsight,

@@ -144,4 +144,51 @@ router.post('/clone-voice', async (req: AuthRequest, res: Response) => {
   }
 });
 
+// Generate ambient background sound using ElevenLabs Sound Generation
+router.post('/ambient', async (req: AuthRequest, res: Response) => {
+  try {
+    const { prompt } = req.body;
+
+    if (!process.env.ELEVENLABS_API_KEY) {
+      return res.status(500).json({ error: 'ElevenLabs API key not configured' });
+    }
+
+    const soundPrompt = prompt || 'gentle ambient lullaby music, soft piano, dreamy atmosphere, calming bedtime';
+    console.log('🎵 Generating ambient sound:', soundPrompt);
+
+    const response = await axios.post(
+      'https://api.elevenlabs.io/v1/sound-generation',
+      {
+        text: soundPrompt,
+        duration_seconds: 22,
+        prompt_influence: 0.4,
+      },
+      {
+        headers: {
+          'xi-api-key': process.env.ELEVENLABS_API_KEY,
+          'Content-Type': 'application/json',
+        },
+        responseType: 'arraybuffer',
+      }
+    );
+
+    console.log('✅ Ambient sound generated');
+    res.set({
+      'Content-Type': 'audio/mpeg',
+      'Content-Length': response.data.length,
+    });
+    res.send(Buffer.from(response.data));
+
+  } catch (error: any) {
+    let errorDetails = error.message;
+    if (error.response?.data) {
+      errorDetails = Buffer.isBuffer(error.response.data)
+        ? error.response.data.toString('utf-8')
+        : JSON.stringify(error.response.data);
+    }
+    console.error('❌ Ambient sound error:', errorDetails);
+    res.status(500).json({ error: 'Failed to generate ambient sound', details: errorDetails });
+  }
+});
+
 export default router;

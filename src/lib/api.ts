@@ -138,6 +138,30 @@ export const useApi = () => {
     },
     getVoices: () => fetchWithAuth('/audio/voices'),
 
+    generateAmbientSound: async (prompt: string) => {
+      const token = await getAccessTokenSilently({
+        authorizationParams: {
+          audience: import.meta.env.VITE_AUTH0_AUDIENCE,
+          scope: 'openid profile email',
+        }
+      });
+
+      const response = await fetch(`${API_URL}/audio/ambient`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ prompt }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to generate ambient sound: ${response.status}`);
+      }
+
+      return response.blob();
+    },
+
     // Interactions
     saveInteraction: (storyId: string, interactionId: string, response: any) =>
       fetchWithAuth(`/stories/${storyId}/interaction`, {

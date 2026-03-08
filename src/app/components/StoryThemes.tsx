@@ -74,7 +74,7 @@ export function StoryThemes() {
 
   return (
     <div
-      className="size-full overflow-y-auto p-8 pl-24"
+      className="size-full overflow-y-auto p-4 pt-16 sm:p-8 sm:pl-20"
       style={{
         backgroundColor: '#e4d5b7',
         backgroundImage: 'url(https://www.toptal.com/designers/subtlepatterns/patterns/old_map.png)',

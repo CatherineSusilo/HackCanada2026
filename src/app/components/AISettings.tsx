@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { motion } from 'motion/react';
-import { ArrowLeft, Palette, Type, Mic, Upload, Volume2, Trash2, Loader2, Check, Play } from 'lucide-react';
+import { ArrowLeft, Palette, Type, Mic, Upload, Volume2, Trash2, Loader2, Check, Play, Shield } from 'lucide-react';
 import { useApi } from '../../lib/api';
 
 interface AISettingsProps {
@@ -9,7 +9,7 @@ interface AISettingsProps {
 
 export function AISettings({ onBack }: AISettingsProps) {
   const api = useApi();
-  const [activeTab, setActiveTab] = useState<'image' | 'text' | 'voice'>('image');
+  const [activeTab, setActiveTab] = useState<'image' | 'text' | 'voice' | 'general'>('image');
   const [imageStyle, setImageStyle] = useState('soft watercolor');
   const [textTone, setTextTone] = useState('gentle and calming');
   const [voices, setVoices] = useState<any[]>([]);
@@ -20,6 +20,8 @@ export function AISettings({ onBack }: AISettingsProps) {
   const [cloneStatus, setCloneStatus] = useState<string | null>(null);
   const [previewingVoice, setPreviewingVoice] = useState<string | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const [parentPin, setParentPin] = useState(localStorage.getItem('parent_pin') || '1234');
+  const [pinSaved, setPinSaved] = useState(false);
 
   useEffect(() => {
     loadVoices();
@@ -118,7 +120,7 @@ export function AISettings({ onBack }: AISettingsProps) {
 
   return (
     <div 
-      className="size-full overflow-y-auto p-8 pl-24"
+      className="size-full overflow-y-auto p-4 pt-16 sm:p-8 sm:pl-20"
       style={{
         backgroundColor: '#e4d5b7',
         backgroundImage: 'url(https://www.toptal.com/designers/subtlepatterns/patterns/old_map.png)',
@@ -146,6 +148,7 @@ export function AISettings({ onBack }: AISettingsProps) {
             { id: 'image' as const, icon: Palette, label: 'image style' },
             { id: 'text' as const, icon: Type, label: 'story tone' },
             { id: 'voice' as const, icon: Mic, label: 'voice settings' },
+            { id: 'general' as const, icon: Shield, label: 'parent settings' },
           ].map((tab) => {
             const Icon = tab.icon;
             return (
@@ -482,6 +485,96 @@ export function AISettings({ onBack }: AISettingsProps) {
                 </div>
               )}
             </div>
+          </motion.div>
+        )}
+        {/* Parent Settings Tab */}
+        {activeTab === 'general' && (
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="p-6"
+            style={{
+              background: 'rgba(250, 245, 235, 0.8)',
+              border: '2px solid rgba(40, 30, 20, 0.25)',
+              boxShadow: '0 3px 8px rgba(0, 0, 0, 0.1)',
+            }}
+          >
+            <h3
+              className="mb-4"
+              style={{
+                fontFamily: "'Patrick Hand', cursive",
+                fontSize: '24px',
+                fontWeight: 'bold',
+                color: 'rgba(20, 15, 10, 0.85)',
+              }}
+            >
+              parent exit PIN
+            </h3>
+            <p
+              className="mb-5"
+              style={{
+                fontFamily: "'Patrick Hand', cursive",
+                fontSize: '16px',
+                color: 'rgba(30, 20, 15, 0.7)',
+              }}
+            >
+              set a 4-digit PIN to exit story mode — prevents accidental taps by little hands
+            </p>
+
+            <div className="flex items-center gap-4 mb-4">
+              <input
+                type="text"
+                inputMode="numeric"
+                maxLength={4}
+                value={parentPin}
+                onChange={(e) => {
+                  const val = e.target.value.replace(/\D/g, '').slice(0, 4);
+                  setParentPin(val);
+                  setPinSaved(false);
+                }}
+                className="w-40 px-4 py-3 text-center"
+                placeholder="1234"
+                style={{
+                  fontFamily: "'Patrick Hand', cursive",
+                  fontSize: '28px',
+                  letterSpacing: '8px',
+                  color: 'rgba(20, 15, 10, 0.9)',
+                  background: 'rgba(255, 255, 255, 0.5)',
+                  border: '1.5px solid rgba(40, 30, 20, 0.3)',
+                  outline: 'none',
+                }}
+              />
+              <button
+                onClick={() => {
+                  if (parentPin.length === 4) {
+                    localStorage.setItem('parent_pin', parentPin);
+                    setPinSaved(true);
+                    setTimeout(() => setPinSaved(false), 2000);
+                  }
+                }}
+                disabled={parentPin.length !== 4}
+                className="px-6 py-3 cursor-pointer disabled:opacity-50 flex items-center gap-2"
+                style={{
+                  fontFamily: "'Patrick Hand', cursive",
+                  fontSize: '18px',
+                  fontWeight: 'bold',
+                  color: 'rgba(20, 15, 10, 0.85)',
+                  background: 'rgba(210, 180, 140, 0.5)',
+                  border: '2px solid rgba(40, 30, 20, 0.35)',
+                }}
+              >
+                {pinSaved ? <><Check className="w-4 h-4" /> saved!</> : 'save PIN'}
+              </button>
+            </div>
+            <p
+              style={{
+                fontFamily: "'Patrick Hand', cursive",
+                fontSize: '14px',
+                color: 'rgba(40, 30, 20, 0.45)',
+              }}
+            >
+              current PIN: {localStorage.getItem('parent_pin') || '1234 (default)'}
+            </p>
           </motion.div>
         )}
       </div>

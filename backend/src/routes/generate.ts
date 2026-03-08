@@ -4,7 +4,67 @@ import { prisma } from '../lib/prisma';
 import axios from 'axios';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 
+async function matchVoiceForCharacter(character: { name: string; description: string; personality: string }, voices: any[]): Promise<{ voiceId: string; voiceName: string } | null> {
+  if (!voices.length) return null;
+  const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
+  const voiceSummary = voices.map((v: any) => ({
+    id: v.voice_id,
+    name: v.name,
+    labels: v.labels || {},
+    description: v.description || '',
+  }));
+  const prompt = `Pick the best voice for this bedtime story character.
+Character: ${character.name} — ${character.description}. Personality: ${character.personality || 'gentle'}
+Available voices: ${JSON.stringify(voiceSummary, null, 1)}
+Return ONLY valid JSON: {"voiceId":"...","voiceName":"...","reason":"..."}`;
+  const MODEL_CHAIN = ['gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-2.0-flash-lite'];
+  for (const modelName of MODEL_CHAIN) {
+    try {
+      const model = genAI.getGenerativeModel({ model: modelName });
+      const result = await model.generateContent(prompt);
+      let text = result.response.text().replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
+      const match = JSON.parse(text);
+      return { voiceId: match.voiceId, voiceName: match.voiceName };
+    } catch (e: any) {
+      if (e.message?.includes('429') || e.message?.includes('404')) continue;
+      return null;
+    }
+  }
+  return null;
+}
+
 const router = Router();
+
+const MODEL_FALLBACK_CHAIN = [
+  'gemini-2.5-flash',
+  'gemini-2.0-flash',
+  'gemini-2.0-flash-lite',
+];
+
+async function generateWithFallback(genAI: InstanceType<typeof GoogleGenerativeAI>, prompt: string): Promise<{ text: string; modelUsed: string }> {
+  for (const modelName of MODEL_FALLBACK_CHAIN) {
+    try {
+      console.log(`  🤖 Trying model: ${modelName}`);
+      const model = genAI.getGenerativeModel({ model: modelName });
+      const result = await model.generateContent(prompt);
+      const text = result.response.text();
+      console.log(`  ✅ Success with: ${modelName}`);
+      return { text, modelUsed: modelName };
+    } catch (err: any) {
+      const msg = err.message || '';
+      if (msg.includes('429') || msg.includes('quota') || msg.includes('Too Many Requests')) {
+        console.warn(`  ⚠️ ${modelName} quota exceeded, trying next...`);
+        continue;
+      }
+      if (msg.includes('404') || msg.includes('not found')) {
+        console.warn(`  ⚠️ ${modelName} not available, trying next...`);
+        continue;
+      }
+      throw err;
+    }
+  }
+  throw new Error('All Gemini models exhausted — quota exceeded on all available models. Please wait or check billing.');
+}
 
 interface StoryCharacter {
   id: string;
@@ -51,9 +111,7 @@ router.post('/story', async (req: AuthRequest, res: Response) => {
     const childPersonality = childData?.preferences?.personality || '';
     const childMedia = childData?.preferences?.favoriteMedia || '';
 
-    // Initialize Gemini AI
     const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
-    const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' });
 
     // Determine paragraph count based on story length
     const lengthConfig = {
@@ -71,8 +129,19 @@ router.post('/story', async (req: AuthRequest, res: Response) => {
 ${chars.map((c, i) => `${i + 1}. ${c.name} — ${c.description}${c.personality ? `. Personality: ${c.personality}` : ''}`).join('\n')}
 - Weave ALL listed characters naturally into the plot as named characters.
 - Give each character dialogue and actions consistent with their personality.
-- Characters should interact with each other meaningfully.\n`;
+- Characters should interact with each other meaningfully.
+- IMPORTANT: Each character MUST have spoken dialogue using this exact format: "dialogue text," said ${chars[0]?.name || 'CharacterName'}.
+- Always attribute dialogue by name after the quote (e.g. "Goodnight," whispered ${chars[0]?.name || 'CharacterName'}.)
+- Use varied speech verbs: said, whispered, murmured, called, giggled, sighed, asked, replied, sang, hummed.\n`;
     }
+
+    const dialogueInstructions = `
+DIALOGUE RULES (VERY IMPORTANT):
+- Every named character MUST speak at least 2-3 times throughout the story.
+- Format dialogue EXACTLY like this: "Goodnight, little one," whispered Mama Bear.
+- Always put the character's name RIGHT AFTER the speech verb.
+- Use varied speech verbs: said, whispered, murmured, called, giggled, sighed, asked, replied, sang, hummed.
+- Make dialogue warm, gentle, and age-appropriate.`;
 
     const storyPrompt = `You are a bedtime story narrator. Create a calming, soothing bedtime story told in third person.
 
@@ -90,12 +159,14 @@ IMPORTANT RULES:
 - Write ${len.paragraphs} paragraphs, each ${len.sentences} sentences long. THIS IS IMPORTANT — do NOT write fewer paragraphs.
 - Keep sentences short and simple — this will be displayed as subtitles.
 - Make the story rich and detailed. Each paragraph should advance the plot meaningfully.
+${dialogueInstructions}
 
 Format: Return ONLY the story paragraphs, separated by double line breaks. No titles, no "The End".`;
 
-    const storyResult = await model.generateContent(storyPrompt);
-    const story = storyResult.response.text();
-    console.log('✅ Story generated');
+    const storyResponse = await generateWithFallback(genAI, storyPrompt);
+    const story = storyResponse.text;
+    const usedModel = storyResponse.modelUsed;
+    console.log('✅ Story generated with', usedModel);
 
     const imageStyle = 'dreamy digital painting, soft glowing lighting, cinematic wide shot, children illustration style, no text';
     
@@ -115,8 +186,8 @@ Return ONLY a valid JSON array, no markdown, no code blocks:
 
 Each prompt must be a single line with no line breaks. Be very descriptive and visual.`;
 
-      const imageResult = await model.generateContent(imagePromptText);
-      let text = imageResult.response.text();
+      const imageResult = await generateWithFallback(genAI, imagePromptText);
+      let text = imageResult.text;
       
       if (!text) {
         console.warn('⚠️ No text in image prompts response');
@@ -134,7 +205,6 @@ Each prompt must be a single line with no line breaks. Be very descriptive and v
       console.warn('⚠️ Image prompt generation/parse failed:', parseErr.message);
     }
 
-    res.json({ story, imagePrompts, modelUsed: 'gemini-2.0-flash' });
     // Generate interactive learning elements based on frequency setting
     const freq = profile.interactionFrequency || 'none';
     let interactions: any[] = [];
@@ -198,8 +268,8 @@ Return ONLY a valid JSON array, no markdown, no code blocks:
   ${exampleObjects}
 ]`;
 
-        const interactionResult = await model.generateContent(interactionPrompt);
-        let iText = interactionResult.response.text();
+        const interactionResult = await generateWithFallback(genAI, interactionPrompt);
+        let iText = interactionResult.text;
 
         if (iText) {
           iText = iText.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
@@ -212,13 +282,101 @@ Return ONLY a valid JSON array, no markdown, no code blocks:
       }
     }
 
-    // Return character voice mappings so frontend can use per-character voices
-    const characterVoices = chars.filter(c => c.voiceId).map(c => ({
+    // Auto-extract characters from the story and add to character pool
+    let characterVoices: Array<{ name: string; voiceId: string }> = chars.filter(c => c.voiceId).map(c => ({
       name: c.name,
-      voiceId: c.voiceId,
+      voiceId: c.voiceId!,
     }));
+    let allCharacterIds = chars.map(c => c.id);
 
-    res.json({ story, imagePrompts, interactions, characterVoices, characterIds: chars.map(c => c.id), modelUsed: 'gemini-2.0-flash' });
+    const auth0Id = req.auth?.payload?.sub;
+    if (auth0Id) {
+      try {
+        const user = await prisma.user.findUnique({ where: { auth0Id } });
+        if (user) {
+          console.log('🔍 Extracting characters from story...');
+          const extractPrompt = `Extract all named characters from this bedtime story. Return ONLY a valid JSON array, no markdown:
+[{"name":"CharacterName","description":"brief 1-sentence description","personality":"1-2 personality traits","icon":"single emoji"}]
+
+Story:
+${story}
+
+Rules:
+- Only include characters that SPEAK or ACT in the story (not just mentioned).
+- Use the character's exact name from the story.
+- The icon should be a single emoji that best represents the character.
+- Keep descriptions short and child-friendly.`;
+
+          const extractResult = await generateWithFallback(genAI, extractPrompt);
+          let eText = extractResult.text;
+          if (eText) {
+            eText = eText.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
+            const extracted: Array<{ name: string; description: string; personality: string; icon: string }> = JSON.parse(eText);
+            console.log(`✅ Extracted ${extracted.length} characters from story`);
+
+            let voices: any[] = [];
+            if (process.env.ELEVENLABS_API_KEY) {
+              try {
+                const voicesRes = await axios.get('https://api.elevenlabs.io/v1/voices', {
+                  headers: { 'xi-api-key': process.env.ELEVENLABS_API_KEY },
+                });
+                voices = voicesRes.data.voices || [];
+              } catch {}
+            }
+
+            const db = prisma as any;
+            const existingChars: Array<{ id: string; name: string; voiceId: string | null; voiceName: string | null }> = await db.character.findMany({
+              where: { userId: user.id },
+              select: { id: true, name: true, voiceId: true, voiceName: true },
+            });
+
+            for (const ec of extracted) {
+              const existing = existingChars.find(
+                (c: any) => c.name.toLowerCase() === ec.name.toLowerCase()
+              );
+              if (existing) {
+                if (!allCharacterIds.includes(existing.id)) {
+                  allCharacterIds.push(existing.id);
+                }
+                if (existing.voiceId && !characterVoices.find(cv => cv.name.toLowerCase() === ec.name.toLowerCase())) {
+                  characterVoices.push({ name: ec.name, voiceId: existing.voiceId });
+                }
+              } else {
+                let voiceId: string | null = null;
+                let voiceName: string | null = null;
+                if (voices.length > 0 && process.env.GEMINI_API_KEY) {
+                  const match = await matchVoiceForCharacter(ec, voices);
+                  if (match) {
+                    voiceId = match.voiceId;
+                    voiceName = match.voiceName;
+                    characterVoices.push({ name: ec.name, voiceId: match.voiceId });
+                    console.log(`  🎤 Matched voice for ${ec.name}: ${match.voiceName}`);
+                  }
+                }
+                const newChar = await db.character.create({
+                  data: {
+                    userId: user.id,
+                    name: ec.name,
+                    description: ec.description,
+                    personality: ec.personality || '',
+                    icon: ec.icon || '🧸',
+                    voiceId,
+                    voiceName,
+                  },
+                });
+                allCharacterIds.push(newChar.id);
+                existingChars.push({ id: newChar.id, name: ec.name, voiceId, voiceName });
+                console.log(`  ✨ Created character: ${ec.name}`);
+              }
+            }
+          }
+        }
+      } catch (extractErr: any) {
+        console.warn('⚠️ Character extraction failed (non-critical):', extractErr.message);
+      }
+    }
+
+    res.json({ story, imagePrompts, interactions, characterVoices, characterIds: allCharacterIds, modelUsed: usedModel });
 
   } catch (error: any) {
     console.error('❌ Story generation error:', error.response?.data || error.message);
@@ -298,7 +456,6 @@ router.post('/analyze-text', async (req: AuthRequest, res: Response) => {
     console.log('🔍 Analyzing text for theme extraction...');
 
     const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
-    const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' });
 
     const prompt = `Analyze this text and extract a bedtime story theme from it. Then rewrite it as a soothing bedtime story suitable for children ages 3-8.
 
@@ -315,8 +472,8 @@ Return ONLY valid JSON, no markdown:
   "story": "The rewritten bedtime story, 10-12 paragraphs separated by double line breaks. Calming, dreamy tone. Third person narration."
 }`;
 
-    const result = await model.generateContent(prompt);
-    let responseText = result.response.text();
+    const result = await generateWithFallback(genAI, prompt);
+    let responseText = result.text;
 
     if (!responseText) {
       throw new Error('Empty response from Gemini');

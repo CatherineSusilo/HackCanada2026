@@ -146,8 +146,8 @@ router.post('/:id/match-voice', async (req: AuthRequest, res: Response) => {
     }));
 
     const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
-    const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' });
 
+    const MODEL_CHAIN = ['gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-2.0-flash-lite'];
     const prompt = `You are helping pick the best voice for a bedtime story character.
 
 Character:
@@ -163,9 +163,19 @@ Pick the single best matching voice for this character. Consider the character's
 Return ONLY valid JSON, no markdown:
 {"voiceId":"...","voiceName":"...","reason":"one sentence explaining why this voice fits"}`;
 
-    const result = await model.generateContent(prompt);
-    let text = result.response.text();
-    if (!text) throw new Error('Empty response');
+    let text = '';
+    for (const modelName of MODEL_CHAIN) {
+      try {
+        const model = genAI.getGenerativeModel({ model: modelName });
+        const result = await model.generateContent(prompt);
+        text = result.response.text();
+        break;
+      } catch (e: any) {
+        if (e.message?.includes('429') || e.message?.includes('404')) continue;
+        throw e;
+      }
+    }
+    if (!text) throw new Error('All models exhausted');
     text = text.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
     const match = JSON.parse(text);
 

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Upload, X, Loader2, ArrowLeft, ArrowRight, Check, Users } from 'lucide-react';
+import { Upload, X, Loader2, ArrowLeft, ArrowRight, Check, Users, Music } from 'lucide-react';
 import type { ChildProfile, StoryCharacter } from '../App';
 import { useApi } from '../../lib/api';
 import { DEFAULT_STORY_THEMES } from '../data/storyThemes';
@@ -36,6 +36,7 @@ export function SetupScreen({ onStart, onBack, onVoiceSettings, onNavigate, pref
   const [savedDrawings, setSavedDrawings] = useState<any[]>([]);
   const [allCharacters, setAllCharacters] = useState<any[]>([]);
   const [selectedCharacters, setSelectedCharacters] = useState<StoryCharacter[]>([]);
+  const [backgroundMusic, setBackgroundMusic] = useState(false);
 
   const totalSteps = 5;
   const progress = ((currentStep + 1) / totalSteps) * 100;
@@ -87,6 +88,7 @@ export function SetupScreen({ onStart, onBack, onVoiceSettings, onNavigate, pref
         interactionFrequency,
         storyLength,
         characters: selectedCharacters,
+        backgroundMusic,
       };
 
       const data = await api.generateStory(profile);
@@ -96,6 +98,8 @@ export function SetupScreen({ onStart, onBack, onVoiceSettings, onNavigate, pref
         ...profile,
         generatedStory: data.story,
         interactions: data.interactions || [],
+        characterVoices: data.characterVoices || [],
+        characterIds: data.characterIds || [],
       });
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to generate story. Please try again.');
@@ -489,6 +493,34 @@ export function SetupScreen({ onStart, onBack, onVoiceSettings, onNavigate, pref
                   );
                 })}
               </div>
+            </div>
+
+            <div className="mb-6">
+              <label className="block mb-3 flex items-center gap-2" style={{ fontFamily: "'Patrick Hand', cursive", fontSize: '19px', color: 'rgba(20, 15, 10, 0.8)', fontWeight: 'bold' }}>
+                <Music className="w-5 h-5" /> background music
+              </label>
+              <button
+                type="button"
+                onClick={() => setBackgroundMusic(!backgroundMusic)}
+                className="w-full px-5 py-4 text-left transition-all cursor-pointer flex items-center gap-3"
+                style={{
+                  fontFamily: "'Patrick Hand', cursive",
+                  fontSize: '17px',
+                  fontWeight: backgroundMusic ? 'bold' : 'normal',
+                  color: backgroundMusic ? 'rgba(20, 15, 10, 0.9)' : 'rgba(40, 30, 20, 0.65)',
+                  background: backgroundMusic ? 'rgba(140, 120, 180, 0.2)' : 'rgba(250, 245, 235, 0.3)',
+                  border: backgroundMusic ? '2px solid rgba(100, 80, 140, 0.5)' : '1px solid rgba(40, 30, 20, 0.2)',
+                }}
+              >
+                <span style={{ fontSize: '24px' }}>{backgroundMusic ? '🎵' : '🔇'}</span>
+                <div>
+                  <div>{backgroundMusic ? 'ambient music on' : 'no background music'}</div>
+                  <div style={{ fontSize: '13px', color: 'rgba(40, 30, 20, 0.45)' }}>
+                    ai-generated ambient sounds matching the story theme
+                  </div>
+                </div>
+                {backgroundMusic && <Check className="w-5 h-5 ml-auto shrink-0" style={{ color: 'rgba(80, 60, 140, 0.7)' }} />}
+              </button>
             </div>
 
             <div>

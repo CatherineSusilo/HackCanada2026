@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { Card } from './ui/card';
 
 interface VitalsData {
@@ -13,46 +13,65 @@ interface VitalsMonitorProps {
   onVitalsData?: (data: VitalsData) => void;
 }
 
+function simulateVitals(elapsedMinutes: number): VitalsData {
+  const jitter = () => (Math.random() - 0.5) * 1.5;
+  const basePulse = Math.max(60, 88 - elapsedMinutes * 0.7);
+  const baseBreathing = Math.max(12, 20 - elapsedMinutes * 0.2);
+  return {
+    pulseRate: Math.round((basePulse + jitter()) * 10) / 10,
+    breathingRate: Math.round((baseBreathing + jitter() * 0.3) * 10) / 10,
+    signalQuality: 0.9 + Math.random() * 0.08,
+    timestamp: new Date().toISOString(),
+  };
+}
+
 export default function VitalsMonitor({ onVitalsUpdate, onVitalsData }: VitalsMonitorProps) {
   const [vitals, setVitals] = useState<VitalsData | null>(null);
   const [isConnected, setIsConnected] = useState(false);
+  const startTimeRef = useRef(Date.now());
+
+  const emitVitals = (data: VitalsData) => {
+    setVitals(data);
+    if (onVitalsData) onVitalsData(data);
+    if (onVitalsUpdate) {
+      const sleepiness = calculateSleepiness(data);
+      const isAsleep = checkIfAsleep(data);
+      onVitalsUpdate(sleepiness, isAsleep);
+    }
+  };
 
   useEffect(() => {
-    // Listen for vitals updates from iOS bridge
     const handleVitalsUpdate = (event: CustomEvent) => {
       const data = event.detail as VitalsData;
-      setVitals(data);
+      emitVitals(data);
       setIsConnected(true);
-
-      // Send raw data to parent
-      if (onVitalsData) {
-        onVitalsData(data);
-      }
-
-      // Calculate sleepiness and notify parent component
-      if (onVitalsUpdate) {
-        const sleepiness = calculateSleepiness(data);
-        const isAsleep = checkIfAsleep(data);
-        onVitalsUpdate(sleepiness, isAsleep);
-      }
     };
 
     window.addEventListener('vitalsUpdate', handleVitalsUpdate as EventListener);
 
-    // Start monitoring when component mounts
     if (window.storyDriftBridge) {
       window.storyDriftBridge.startMonitoring();
       setIsConnected(true);
+    } else {
+      setIsConnected(true);
+      emitVitals(simulateVitals(0));
+      const iv = setInterval(() => {
+        const elapsedMinutes = (Date.now() - startTimeRef.current) / 60000;
+        emitVitals(simulateVitals(elapsedMinutes));
+      }, 5000);
+      return () => {
+        window.removeEventListener('vitalsUpdate', handleVitalsUpdate as EventListener);
+        clearInterval(iv);
+      };
     }
 
     return () => {
       window.removeEventListener('vitalsUpdate', handleVitalsUpdate as EventListener);
-      // Stop monitoring when component unmounts
       if (window.storyDriftBridge) {
         window.storyDriftBridge.stopMonitoring();
       }
     };
-  }, [onVitalsUpdate]);
+  }, [onVitalsUpdate, onVitalsData]);
 
   const calculateSleepiness = (data: VitalsData): number => {
     if (!data.pulseRate || !data.breathingRate) return 0.5;
@@ -139,9 +158,14 @@ export default function VitalsMonitor({ onVitalsUpdate, onVitalsData }: VitalsMo
           </div>
         )}
 
-        {!isConnected && (
+        {!isConnected && !vitals && (
           <div className="text-white/60 text-sm text-center py-2">
             Open in iOS app to enable monitoring
+          </div>
+        )}
+        {isConnected && vitals && !window.storyDriftBridge && (
+          <div className="text-white/50 text-xs text-center pt-1">
+            simulated feed
           </div>
         )}
       </div>

@@ -1,13 +1,90 @@
 import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Moon, X, Info } from 'lucide-react';
-import type { ChildProfile, StorySummary } from '../App';
+import type { ChildProfile, StorySummary, CharacterVoice } from '../App';
 import { DriftMeter } from './DriftMeter';
 import VitalsMonitor from './VitalsMonitor';
 import { generateStorySegment } from '../utils/storyGenerator';
 import { calculateDriftScore } from '../utils/driftCalculator';
 import { useApi } from '../../lib/api';
 import { StoryInteraction, type InteractionData } from './StoryInteraction';
+
+interface VoiceSegment {
+  text: string;
+  voiceId: string;
+  isDialogue: boolean;
+  character?: string;
+}
+
+const SPEECH_VERBS = 'said|whispered|replied|murmured|exclaimed|asked|called|shouted|spoke|sighed|yawned|giggled|laughed|cried|sang|hummed|added|continued|began|answered|declared|mentioned|noted|observed|offered|promised|reminded|suggested|told|warned|wondered';
+
+function splitIntoVoiceSegments(
+  text: string,
+  characterVoices: CharacterVoice[],
+  narratorVoice: string
+): VoiceSegment[] {
+  if (!characterVoices || characterVoices.length === 0) {
+    return [{ text, voiceId: narratorVoice, isDialogue: false }];
+  }
+
+  const segments: VoiceSegment[] = [];
+  const quoteRegex = /\u201c([^\u201d]+)\u201d|"([^"]+)"/g;
+  const speechVerbRegex = new RegExp(`(?:${SPEECH_VERBS})`, 'i');
+
+  let lastEnd = 0;
+  let match: RegExpExecArray | null;
+
+  while ((match = quoteRegex.exec(text)) !== null) {
+    const dialogue = match[1] || match[2];
+    const start = match.index;
+    const end = match.index + match[0].length;
+
+    const afterCtx = text.slice(end, Math.min(text.length, end + 60)).toLowerCase();
+    const beforeCtx = text.slice(Math.max(0, start - 60), start).toLowerCase();
+
+    let matchedVoice: CharacterVoice | undefined;
+    if (speechVerbRegex.test(afterCtx) || speechVerbRegex.test(beforeCtx)) {
+      for (const cv of characterVoices) {
+        const nameLower = cv.name.toLowerCase();
+        const firstName = nameLower.split(' ')[0];
+        if (afterCtx.includes(nameLower) || afterCtx.includes(firstName) ||
+            beforeCtx.includes(nameLower) || beforeCtx.includes(firstName)) {
+          matchedVoice = cv;
+          break;
+        }
+      }
+    }
+
+    if (start > lastEnd) {
+      const narration = text.slice(lastEnd, start).trim();
+      if (narration) {
+        segments.push({ text: narration, voiceId: narratorVoice, isDialogue: false });
+      }
+    }
+
+    if (matchedVoice) {
+      segments.push({
+        text: dialogue,
+        voiceId: matchedVoice.voiceId,
+        isDialogue: true,
+        character: matchedVoice.name,
+      });
+    } else {
+      segments.push({ text: dialogue, voiceId: narratorVoice, isDialogue: true });
+    }
+
+    lastEnd = end;
+  }
+
+  if (lastEnd < text.length) {
+    const remaining = text.slice(lastEnd).trim();
+    if (remaining) {
+      segments.push({ text: remaining, voiceId: narratorVoice, isDialogue: false });
+    }
+  }
+
+  return segments.length > 0 ? segments : [{ text, voiceId: narratorVoice, isDialogue: false }];
+}
 
 interface StoryScreenProps {
   profile: ChildProfile;
@@ -50,6 +127,7 @@ export function StoryScreen({ profile, onComplete, onExit }: StoryScreenProps) {
   const imagePromptsRef = useRef<any[]>((window as any).storyImagePrompts || []);
   const startTimeRef = useRef(Date.now());
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const bgMusicRef = useRef<HTMLAudioElement | null>(null);
   const generatedImagesRef = useRef<Map<number, string>>(new Map());
   const imageGenInProgressRef = useRef<Set<number>>(new Set());
 
@@ -91,7 +169,6 @@ export function StoryScreen({ profile, onComplete, onExit }: StoryScreenProps) {
 
     console.log('Image prompts available:', imagePromptsRef.current.length);
 
-    // Save story session (fire-and-forget)
     if (profile.childId) {
       api.createStory({
         childId: profile.childId,
@@ -105,14 +182,39 @@ export function StoryScreen({ profile, onComplete, onExit }: StoryScreenProps) {
         generatedImages: [],
         interactions: interactionsState,
         modelUsed: 'gemini-2.5-flash',
+        characterIds: profile.characterIds || [],
       }).then(s => setStorySessionId(s.id)).catch(e => console.warn('Session save failed:', e));
     }
 
-    // Preload first image
     generateImageForIndex(0);
 
+    if (profile.backgroundMusic) {
+      const toneMap: Record<string, string> = {
+        calming: 'soft gentle lullaby music, piano, dreamy ambient bedtime atmosphere',
+        energetic: 'light playful xylophone music, whimsical children adventure',
+        sad: 'soft melancholic piano, gentle strings, soothing ambient',
+        adventurous: 'gentle magical orchestra, twinkling sounds, fairy tale ambience',
+        none: 'soft ambient background music, calm and peaceful bedtime sounds',
+      };
+      const musicPrompt = toneMap[profile.storytellingTone] || toneMap.calming;
+      api.generateAmbientSound(musicPrompt).then(blob => {
+        const url = URL.createObjectURL(blob);
+        const audio = new Audio(url);
+        audio.loop = true;
+        audio.volume = 0.15;
+        audio.play().catch(() => {});
+        bgMusicRef.current = audio;
+      }).catch(e => console.warn('Background music failed:', e));
+    }
+
     const hintTimer = setTimeout(() => setShowHint(false), 4000);
-    return () => clearTimeout(hintTimer);
+    return () => {
+      clearTimeout(hintTimer);
+      if (bgMusicRef.current) {
+        bgMusicRef.current.pause();
+        bgMusicRef.current = null;
+      }
+    };
   }, []);
 
   const generateImageForIndex = async (paraIdx: number) => {
@@ -152,71 +254,69 @@ export function StoryScreen({ profile, onComplete, onExit }: StoryScreenProps) {
     return () => clearInterval(iv);
   }, [isPlaying, storyDone]);
 
-  // Speak paragraph using ElevenLabs
+  const characterVoicesRef = useRef<CharacterVoice[]>(profile.characterVoices || []);
+
   const speakParagraph = async (text: string) => {
     if (!text) return;
     setIsSpeaking(true);
 
-    // Calculate drift score, optionally boosted by vitals data
     let newScore = calculateDriftScore(profile.initialState, elapsedSeconds);
-    
-    // If vitals are connected, blend the scores
     if (vitalsConnected) {
       const vitalsScore = vitalsSleepiness * 100;
-      newScore = (newScore * 0.6) + (vitalsScore * 0.4); // 60% time-based, 40% vitals-based
+      newScore = (newScore * 0.6) + (vitalsScore * 0.4);
     }
-    
     setDriftScore(newScore);
     setDriftHistory((prev) => [...prev, newScore]);
 
+    const savedVoice = localStorage.getItem('ai_selected_voice') || 'dBeBf4ifazyJTIRH3VQh';
+    const segments = splitIntoVoiceSegments(text, characterVoicesRef.current, savedVoice);
+
     try {
-      // Voice mapping for different storytelling tones
-      const DEFAULT_VOICE = 'dBeBf4ifazyJTIRH3VQh';
-      const voiceMap: Record<string, string> = {
-        calming: DEFAULT_VOICE,
-        energetic: DEFAULT_VOICE,
-        sad: DEFAULT_VOICE,
-        adventurous: DEFAULT_VOICE,
-        none: DEFAULT_VOICE,
-      };
-
-      const voiceId = voiceMap[profile.storytellingTone] || localStorage.getItem('ai_selected_voice') || DEFAULT_VOICE;
-
-      const blob = await api.generateAudio(text, voiceId);
-      const url = URL.createObjectURL(blob);
-      const audio = new Audio(url);
-
-      audio.onended = () => {
-        setIsSpeaking(false);
-        if (currentParagraphIndex >= paragraphs.length - 1 || newScore >= 90) {
-          completeStory();
-        } else {
-          advanceOrInteract(currentParagraphIndex + 1);
-        }
-      };
-
-      audio.onerror = () => {
-        console.error('Audio playback failed');
-        setIsSpeaking(false);
-        if (currentParagraphIndex < paragraphs.length - 1) {
-          advanceOrInteract(currentParagraphIndex + 1);
-        }
-      };
-
-      audio.play();
-
+      await speakSegmentsSequentially(segments);
     } catch (error) {
       console.warn('ElevenLabs failed, falling back to Web Speech API:', error);
       speakWithBrowserTTS(text, newScore);
+      return;
+    }
+
+    setIsSpeaking(false);
+    if (currentParagraphIndex >= paragraphs.length - 1 || newScore >= 90) {
+      completeStory();
+    } else {
+      advanceOrInteract(currentParagraphIndex + 1);
     }
   };
 
-  const speakWithBrowserTTS = (text: string, newScore: number) => {
+  const speakSegmentsSequentially = async (segments: VoiceSegment[]): Promise<void> => {
+    for (const segment of segments) {
+      if (segment.character) {
+        setCurrentText(`${segment.character}: "${segment.text}"`);
+      }
+      await playOneSegment(segment);
+    }
+  };
+
+  const playOneSegment = (segment: VoiceSegment): Promise<void> => {
+    return new Promise(async (resolve, reject) => {
+      try {
+        const blob = await api.generateAudio(segment.text, segment.voiceId);
+        const url = URL.createObjectURL(blob);
+        const audio = new Audio(url);
+        audioRef.current = audio;
+        audio.onended = () => resolve();
+        audio.onerror = () => resolve();
+        audio.play();
+      } catch (err) {
+        reject(err);
+      }
+    });
+  };
+
+  const speakWithBrowserTTS = (text: string, _newScore?: number) => {
     const synth = window.speechSynthesis;
     synth.cancel();
     const utterance = new SpeechSynthesisUtterance(text);
 
-    // Pick a soft voice matching the storytelling tone
     const voices = synth.getVoices();
     const toneRateMap: Record<string, number> = {
       calming: 0.85,
@@ -229,7 +329,6 @@ export function StoryScreen({ profile, onComplete, onExit }: StoryScreenProps) {
     utterance.pitch = 1.0;
     utterance.volume = 1.0;
 
-    // Prefer a female English voice for bedtime stories
     const preferred = voices.find(v => v.lang.startsWith('en') && v.name.includes('Samantha'))
       || voices.find(v => v.lang.startsWith('en') && v.name.toLowerCase().includes('female'))
       || voices.find(v => v.lang.startsWith('en'));
@@ -237,7 +336,7 @@ export function StoryScreen({ profile, onComplete, onExit }: StoryScreenProps) {
 
     utterance.onend = () => {
       setIsSpeaking(false);
-      if (currentParagraphIndex >= paragraphs.length - 1 || newScore >= 90) {
+      if (currentParagraphIndex >= paragraphs.length - 1 || driftScore >= 90) {
         completeStory();
       } else {
         advanceOrInteract(currentParagraphIndex + 1);
@@ -383,6 +482,18 @@ export function StoryScreen({ profile, onComplete, onExit }: StoryScreenProps) {
     setStoryDone(true);
     setIsPlaying(false);
 
+    if (bgMusicRef.current) {
+      const music = bgMusicRef.current;
+      const fadeOut = setInterval(() => {
+        if (music.volume > 0.02) {
+          music.volume = Math.max(0, music.volume - 0.02);
+        } else {
+          clearInterval(fadeOut);
+          music.pause();
+        }
+      }, 200);
+    }
+
     const totalMin = Math.floor(elapsedSeconds / 60);
     const remSec = elapsedSeconds % 60;
     const duration = `${totalMin}m ${remSec}s`;
@@ -411,6 +522,10 @@ export function StoryScreen({ profile, onComplete, onExit }: StoryScreenProps) {
   };
 
   const togglePlayPause = () => {
+    if (isPlaying) {
+      audioRef.current?.pause();
+      window.speechSynthesis.cancel();
+    }
     setIsPlaying(!isPlaying);
   };
 
@@ -460,15 +575,20 @@ export function StoryScreen({ profile, onComplete, onExit }: StoryScreenProps) {
         </div>
       )}
 
-      {/* Main content area with background */}
+      {/* Main content area with background — tap to pause/resume */}
       <div 
-        className="flex-1 p-6 relative flex flex-col min-h-screen"
+        className="flex-1 p-6 relative flex flex-col min-h-screen cursor-pointer"
         style={{
           backgroundImage: backgroundImage ? `linear-gradient(rgba(15, 13, 38, 0.4), rgba(15, 13, 38, 0.5)), url(${backgroundImage})` : 'linear-gradient(rgb(15 13 38), rgb(15 13 38))',
           backgroundSize: 'cover',
           backgroundPosition: 'center',
           backgroundRepeat: 'no-repeat',
           transition: 'background-image 1s ease-in-out'
+        }}
+        onClick={() => {
+          if (!storyDone && !activeInteraction && !showExitPrompt) {
+            togglePlayPause();
+          }
         }}
       >
         {/* Spacer to push content to bottom */}
