@@ -181,13 +181,52 @@ export function StoryScreen({ profile, onComplete }: StoryScreenProps) {
       audio.play();
 
     } catch (error) {
-      console.error('ElevenLabs audio failed:', error);
+      console.warn('ElevenLabs failed, falling back to Web Speech API:', error);
+      speakWithBrowserTTS(text, newScore);
+    }
+  };
+
+  const speakWithBrowserTTS = (text: string, newScore: number) => {
+    const synth = window.speechSynthesis;
+    synth.cancel();
+    const utterance = new SpeechSynthesisUtterance(text);
+
+    // Pick a soft voice matching the storytelling tone
+    const voices = synth.getVoices();
+    const toneRateMap: Record<string, number> = {
+      calming: 0.85,
+      energetic: 1.0,
+      sad: 0.8,
+      adventurous: 0.95,
+      none: 0.85,
+    };
+    utterance.rate = toneRateMap[profile.storytellingTone] || 0.85;
+    utterance.pitch = 1.0;
+    utterance.volume = 1.0;
+
+    // Prefer a female English voice for bedtime stories
+    const preferred = voices.find(v => v.lang.startsWith('en') && v.name.includes('Samantha'))
+      || voices.find(v => v.lang.startsWith('en') && v.name.toLowerCase().includes('female'))
+      || voices.find(v => v.lang.startsWith('en'));
+    if (preferred) utterance.voice = preferred;
+
+    utterance.onend = () => {
       setIsSpeaking(false);
-      // Move to next paragraph anyway
+      if (currentParagraphIndex >= paragraphs.length - 1 || newScore >= 90) {
+        completeStory();
+      } else {
+        setCurrentParagraphIndex((prev) => prev + 1);
+      }
+    };
+
+    utterance.onerror = () => {
+      setIsSpeaking(false);
       if (currentParagraphIndex < paragraphs.length - 1) {
         setCurrentParagraphIndex((prev) => prev + 1);
       }
-    }
+    };
+
+    synth.speak(utterance);
   };
 
   // Trigger paragraph playback
