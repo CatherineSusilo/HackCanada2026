@@ -110,11 +110,9 @@ export default function App() {
 
   const handleSidebarViewChange = (view: SidebarView) => {
     setSidebarView(view);
-    if (view === 'dashboard') {
-      setAppState('dashboard');
-      setSelectedChild(null);
-      setStoryConfig(null);
-    }
+    setAppState('dashboard');
+    setSelectedChild(null);
+    setStoryConfig(null);
   };
 
   const handleBackToRoadmap = () => {
@@ -171,9 +169,7 @@ export default function App() {
     return <SetupScreen onStart={handleConfigureStory} onVoiceSettings={handleVoiceSettings} prefilledConfig={storyConfig} onBack={handleBackToDashboard} />;
   }
 
-  if (appState === 'roadmap' && selectedChild) {
-    return <StoryRoadmap child={selectedChild} onStartStory={handleStartStory} onBack={handleBackToDashboard} />;
-  }
+
 
   if (appState === 'story' && childProfile) {
     return <StoryScreen profile={childProfile} onComplete={handleStoryComplete} />;
@@ -189,6 +185,10 @@ export default function App() {
       <Sidebar view={sidebarView} onViewChange={handleSidebarViewChange} />
       
       <div className="flex-1 overflow-auto">
+        {appState === 'roadmap' && selectedChild && (
+          <StoryRoadmap child={selectedChild} onStartStory={handleStartStory} onBack={handleBackToDashboard} />
+        )}
+
         {sidebarView === 'dashboard' && appState === 'dashboard' && (
           <ChildDashboard onSelectChild={handleSelectChild} onStartOnboarding={handleStartOnboarding} />
         )}
