@@ -5,48 +5,64 @@ import AVFoundation
 struct ContentView: View {
     @ObservedObject var sdk = SmartSpectraSwiftSDK.shared
     @StateObject private var spectraManager = SmartSpectraManager()
-    @StateObject private var webViewStore = WebViewStore()
     @State private var cameraGranted = false
+    @State private var cameraStatus: String = "Requesting camera..."
 
     init() {
-        SmartSpectraSwiftSDK.shared.setApiKey("BGvdA0lLfe70oLSvugIs31tIzrGU6KqI8Q5wG5lj")
+        SmartSpectraSwiftSDK.shared.setApiKey("-")
     }
 
     var body: some View {
         ZStack {
-            if cameraGranted {
-                // Web view displaying your React app
-                WebView(webViewStore: webViewStore, spectraManager: spectraManager)
-                    .edgesIgnoringSafeArea(.all)
+            Color.black.edgesIgnoringSafeArea(.all)
 
-                // SmartSpectra overlay for vitals monitoring
-                VStack {
-                    Spacer()
-                    SmartSpectraView()
-                        .frame(width: 160, height: 160)
-                        .cornerRadius(12)
-                        .padding(.bottom, 40)
-                        .onReceive(spectraManager.metricsPublisher) { metrics in
-                            webViewStore.sendMetrics(metrics)
-                        }
-                }
-            } else {
-                Color.black
+            if cameraGranted {
+                SmartSpectraView()
                     .edgesIgnoringSafeArea(.all)
-                    .onAppear {
-                        AVCaptureDevice.requestAccess(for: .video) { granted in
-                            DispatchQueue.main.async {
-                                cameraGranted = granted
-                                if granted {
-                                    spectraManager.startMonitoring()
-                                }
-                                print("Camera granted: \(granted)")
-                            }
-                        }
-                    }
+            } else {
+                VStack(spacing: 20) {
+                    Image(systemName: "camera.fill")
+                        .font(.system(size: 60))
+                        .foregroundColor(.white)
+                    Text(cameraStatus)
+                        .foregroundColor(.white)
+                        .multilineTextAlignment(.center)
+                        .padding()
+                }
             }
         }
+        .onAppear {
+            requestCameraAccess()
+        }
         .preferredColorScheme(.dark)
+    }
+
+    private func requestCameraAccess() {
+        let status = AVCaptureDevice.authorizationStatus(for: .video)
+        switch status {
+        case .authorized:
+            DispatchQueue.main.async {
+                self.cameraGranted = true
+                self.spectraManager.startMonitoring()
+            }
+        case .notDetermined:
+            AVCaptureDevice.requestAccess(for: .video) { granted in
+                DispatchQueue.main.async {
+                    if granted {
+                        self.cameraGranted = true
+                        self.spectraManager.startMonitoring()
+                    } else {
+                        self.cameraStatus = "Camera access denied. Please enable in Settings."
+                    }
+                }
+            }
+        case .denied, .restricted:
+            DispatchQueue.main.async {
+                self.cameraStatus = "Camera access denied. Please enable in Settings → Privacy → Camera."
+            }
+        @unknown default:
+            break
+        }
     }
 }
 

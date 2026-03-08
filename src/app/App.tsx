@@ -197,7 +197,7 @@ export default function App() {
           <ChildOnboarding onComplete={handleOnboardingComplete} />
         )}
         
-        {sidebarView === 'stats' && (
+        {sidebarView === 'statistics' && (
           <BehavioralStats />
         )}
         
