@@ -162,53 +162,8 @@ export default function App() {
 
   // Main app (authenticated)
   return (
-    <>
-      {/* Show sidebar for all views except story and summary */}
-      {appState !== 'story' && appState !== 'summary' && (
-        <Sidebar currentView={sidebarView} onViewChange={handleSidebarViewChange} />
-      )}
-
-      {/* Sidebar Views */}
-      {sidebarView === 'dashboard' && appState === 'dashboard' && (
-        <ChildDashboard onSelectChild={handleSelectChild} onAddChild={handleStartOnboarding} />
-      )}
-      {sidebarView === 'statistics' && (
-        <BehavioralStats onBack={() => setSidebarView('dashboard')} />
-      )}
-      {sidebarView === 'archive' && (
-        <StoryArchive onBack={() => setSidebarView('dashboard')} />
-      )}
-      {sidebarView === 'drawings' && (
-        <DrawingsManager onBack={() => setSidebarView('dashboard')} />
-      )}
-      {sidebarView === 'themes' && (
-        <StoryThemes onBack={() => setSidebarView('dashboard')} />
-      )}
-      {sidebarView === 'ai-settings' && (
-        <AISettings onBack={() => setSidebarView('dashboard')} />
-      )}
-
-      {/* Flow Views */}
-      {appState === 'onboarding' && (
-        <ChildOnboarding 
-          onComplete={handleOnboardingComplete}
-          onBack={handleBackToDashboard}
-        />
-      )}
-      {appState === 'roadmap' && selectedChild && (
-        <StoryRoadmap 
-          child={selectedChild} 
-          onBack={handleBackToDashboard}
-          onStartStory={handleStartStory}
-        />
-      )}
-      {appState === 'setup' && storyConfig && (
-        <SetupScreen 
-          onStart={handleConfigureStory}
-          onBack={handleBackToRoadmap}
-          prefilledConfig={storyConfig}
-        />
-      )}
+    <div className="min-h-full w-full bg-gradient-to-br from-indigo-950 via-purple-900 to-slate-900">
+      {appState === 'setup' && <SetupScreen onStart={handleStartStory} />}
       {appState === 'story' && childProfile && (
         <StoryScreen profile={childProfile} onComplete={handleStoryComplete} />
       )}

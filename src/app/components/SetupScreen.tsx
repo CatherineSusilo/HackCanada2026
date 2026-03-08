@@ -69,51 +69,14 @@ export function SetupScreen({ onStart, onBack, prefilledConfig }: SetupScreenPro
   };
 
   return (
-    <div 
-      className="size-full flex items-center justify-center p-6 overflow-y-auto"
-      style={{
-        backgroundColor: '#e4d5b7',
-        backgroundImage: 'url(https://www.toptal.com/designers/subtlepatterns/patterns/old_map.png)',
-        backgroundSize: '400px 400px',
-      }}
-    >
-      {/* Parchment overlay */}
-      <div 
-        className="fixed inset-0 pointer-events-none"
-        style={{
-          background: `
-            radial-gradient(ellipse at 15% 20%, rgba(90, 70, 50, 0.08) 0%, transparent 45%),
-            radial-gradient(ellipse at 85% 75%, rgba(80, 60, 40, 0.06) 0%, transparent 40%),
-            linear-gradient(180deg, 
-              rgba(244, 232, 208, 0.5) 0%, 
-              rgba(235, 224, 203, 0.3) 50%,
-              rgba(244, 232, 208, 0.5) 100%
-            )
-          `
-        }}
-      />
-
-      <div className="w-full max-w-md relative z-10">
-        {onBack && (
-          <button
-            onClick={onBack}
-            className="mb-4 flex items-center gap-2 cursor-pointer transition-all"
-            style={{ color: 'rgba(30, 20, 15, 0.6)', fontFamily: "'Patrick Hand', cursive", fontSize: '17px' }}
-            onMouseEnter={(e) => e.currentTarget.style.color = 'rgba(20, 15, 10, 0.85)'}
-            onMouseLeave={(e) => e.currentTarget.style.color = 'rgba(30, 20, 15, 0.6)'}
-          >
-            <ArrowLeft className="w-5 h-5" />
-            <span>back to map</span>
-          </button>
-        )}
-
-        <div className="text-center mb-6">
-          <h1 style={{ fontFamily: "'Indie Flower', cursive", fontSize: '38px', color: 'rgba(20, 15, 10, 0.85)', marginBottom: '8px' }}>
-            customize story
-          </h1>
-          <p style={{ fontFamily: "'Patrick Hand', cursive", fontSize: '18px', color: 'rgba(30, 20, 15, 0.7)' }}>
-            final details for {name}'s bedtime tale
-          </p>
+    <div className="min-h-full w-full flex items-center justify-center p-6 overflow-auto">
+      <div className="w-full max-w-md my-8">
+        <div className="text-center mb-8">
+          <div className="flex items-center justify-center gap-2 mb-4">
+            <Moon className="w-10 h-10 text-indigo-300" />
+            <h1 className="text-4xl text-white">StoryDrift</h1>
+          </div>
+          <p className="text-indigo-200">The story that knows when your child is asleep</p>
         </div>
 
         <form 

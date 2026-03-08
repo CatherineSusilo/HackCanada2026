@@ -1,6 +1,9 @@
 import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import type { ChildProfile, StorySummary } from '../App';
+import { DriftMeter } from './DriftMeter';
+import VitalsMonitor from './VitalsMonitor';
+import { generateStorySegment } from '../utils/storyGenerator';
 import { calculateDriftScore } from '../utils/driftCalculator';
 import { useApi } from '../../lib/api';
 
@@ -22,9 +25,8 @@ export function StoryScreen({ profile, onComplete }: StoryScreenProps) {
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const [driftHistory, setDriftHistory] = useState<number[]>([0]);
-  const [storySessionId, setStorySessionId] = useState<string | null>(null);
-  const [storyDone, setStoryDone] = useState(false);
-  const [showHint, setShowHint] = useState(true);
+  const [vitalsConnected, setVitalsConnected] = useState(false);
+  const [vitalsSleepiness, setVitalsSleepiness] = useState(0);
 
   const imagePromptsRef = useRef<any[]>((window as any).storyImagePrompts || []);
   const startTimeRef = useRef(Date.now());
@@ -136,18 +138,40 @@ export function StoryScreen({ profile, onComplete }: StoryScreenProps) {
       }
     }
 
-    const score = calculateDriftScore(profile.initialState, elapsedSeconds);
-    setDriftScore(score);
-    setDriftHistory(prev => [...prev, score]);
+  }, [ishandleVitalsUpdate = (sleepiness: number, isAsleep: boolean) => {
+    setVitalsConnected(true);
+    setVitalsSleepiness(sleepiness);
+    
+    // If vitals show child is asleep, boost drift score
+    if (isAsleep) {
+      const boostedScore = Math.min(100, driftScore + 20);
+      setDriftScore(boostedScore);
+      setDriftHistory((prev) => [...prev, boostedScore]);
+    }
+  };
 
     if ('speechSynthesis' in window) {
       window.speechSynthesis.cancel();
       setIsSpeaking(true);
 
-      const utt = new SpeechSynthesisUtterance(text);
-      utt.rate = Math.max(0.6, 1.0 - score / 200);
-      utt.volume = audioRef.current ? 0 : Math.max(0.4, 1.0 - score / 150);
-      utt.pitch = Math.max(0.8, 1.0 - score / 400);
+      // Calculate drift score, optionally boosted by vitals data
+      let newScore = calculateDriftScore(profile.initialState, elapsedSeconds);
+      
+      // If vitals are connected, blend the scores
+      if (vitalsConnected) {
+        const vitalsScore = vitalsSleepiness * 100;
+        newScore = (newScore * 0.6) + (vitalsScore * 0.4); // 60% time-based, 40% vitals-based
+      }
+      
+
+      const newScore = calculateDriftScore(profile.initialState, elapsedSeconds);
+      setDriftScore(newScore);
+      setDriftHistory((prev) => [...prev, newScore]);
+
+      const utterance = new SpeechSynthesisUtterance(text);
+      utterance.rate = Math.max(0.6, 1.0 - newScore / 200);
+      utterance.volume = Math.max(0.4, 1.0 - newScore / 150);
+      utterance.pitch = Math.max(0.8, 1.0 - newScore / 400);
 
       const voices = window.speechSynthesis.getVoices();
       const voice = voices.find(v => v.lang.startsWith('en')) || voices[0];
@@ -209,43 +233,64 @@ export function StoryScreen({ profile, onComplete }: StoryScreenProps) {
   };
 
   return (
-    <div
-      className="fixed inset-0 w-screen h-screen overflow-hidden"
-      style={{ userSelect: 'none' }}
-      onClick={togglePlayPause}
-    >
-      {/* Base gradient (always visible) */}
-      <div
-        className="absolute inset-0"
+    <div className="w-full h-full flex flex-col">
+      {/* Info button - fixed position top right */}
+      <button
+        onClick={() => setIsPanelOpen(!isPanelOpen)}
+        className="fixed top-4 right-4 z-50 w-12 h-12 bg-white/10 hover:bg-white/20 backdrop-blur-md text-white rounded-full border border-white/20 transition-all flex items-center justify-center shadow-lg"
+      >
+        {isPanelOpen ? <X className="w-5 h-5" /> : <Info className="w-5 h-5" />}
+      </button>
+
+      {/* Collapsible info panel */}
+      {isPanelOpen && (
+        <div className="fixed top-20 right-4 z-40 w-80 bg-black/70 backdrop-blur-xl rounded-lg border border-white/20 shadow-2xl overflow-hidden animate-in slide-in-from-top-5">
+          <div className="p-6">
+            <div className="flex items-center gap-3 mb-4">
+              <Moon className="w-6 h-6 text-indigo-300" />
+
+              {/* Vitals Monitor */}
+              <div className="pt-3 border-t border-white/10">
+                <VitalsMonitor onVitalsUpdate={handleVitalsUpdate} />
+              </div>
+              <div>
+                <h2 className="text-white font-semibold">{storyTitle}</h2>
+                <p className="text-indigo-300 text-sm">{profile.name}'s bedtime story</p>
+              </div>
+            </div>
+            
+            <div className="space-y-3 pt-4 border-t border-white/10">
+              <div className="flex justify-between items-center">
+                <span className="text-indigo-300 text-sm">Time Elapsed</span>
+                <span className="text-white font-medium">{formatTime(elapsedSeconds)}</span>
+              </div>
+              
+              <div className="flex justify-between items-center">
+                <span className="text-indigo-300 text-sm">Drift Score</span>
+                <span className="text-white font-medium">{Math.round(driftScore)}</span>
+              </div>
+
+              <div className="pt-3 border-t border-white/10">
+                <DriftMeter score={driftScore} />
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Main content area with background */}
+      <div 
+        className="flex-1 p-6 relative flex flex-col min-h-screen"
         style={{
-          background: 'linear-gradient(135deg, #0a0a2e 0%, #1a1a4e 25%, #0d1b2a 50%, #1b2838 75%, #0a0a2e 100%)',
+          backgroundImage: backgroundImage ? `linear-gradient(rgba(15, 13, 38, 0.4), rgba(15, 13, 38, 0.5)), url(${backgroundImage})` : 'linear-gradient(rgb(15 13 38), rgb(15 13 38))',
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
+          backgroundRepeat: 'no-repeat',
+          transition: 'background-image 1s ease-in-out'
         }}
-      />
-
-      {/* AI-generated background image */}
-      <AnimatePresence mode="sync">
-        {bgImage && (
-          <motion.div
-            key={bgImage}
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 2 }}
-            className="absolute inset-0"
-            style={{
-              backgroundImage: `url(${bgImage})`,
-              backgroundSize: 'cover',
-              backgroundPosition: 'center',
-            }}
-          />
-        )}
-      </AnimatePresence>
-
-      {/* Dark overlay */}
-      <div
-        className="absolute inset-0"
-        style={{ background: bgImage ? 'rgba(0,0,0,0.5)' : 'rgba(0,0,0,0.25)' }}
-      />
+      >
+        {/* Spacer to push content to bottom */}
+        <div className="flex-1"></div>
 
       {/* Subtitle area */}
       <div className="absolute bottom-0 left-0 right-0 z-10 flex flex-col items-center pb-16 px-8">
