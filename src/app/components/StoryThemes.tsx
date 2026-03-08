@@ -49,30 +49,16 @@ export function StoryThemes({ onBack }: StoryThemesProps) {
       <div className="max-w-6xl mx-auto">
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
-          <div className="flex items-center gap-4">
-            <button
-              onClick={onBack}
-              className="p-2 transition-all cursor-pointer"
-              style={{
-                background: 'rgba(250, 245, 235, 0.8)',
-                border: '1px solid rgba(40, 30, 20, 0.25)',
-                boxShadow: '0 2px 5px rgba(0, 0, 0, 0.08)',
-              }}
-            >
-              <ArrowLeft className="w-5 h-5" style={{ color: 'rgba(20, 15, 10, 0.8)' }} />
-            </button>
-            
-            <h1 
-              style={{ 
-                fontFamily: "'Indie Flower', cursive", 
-                fontSize: '36px',
-                fontWeight: 'bold',
-                color: 'rgba(20, 15, 10, 0.9)' 
-              }}
-            >
-              story themes
-            </h1>
-          </div>
+          <h1 
+            style={{ 
+              fontFamily: "'Indie Flower', cursive", 
+              fontSize: '36px',
+              fontWeight: 'bold',
+              color: 'rgba(20, 15, 10, 0.9)' 
+            }}
+          >
+            story themes
+          </h1>
 
           <button
             onClick={() => setShowAddForm(!showAddForm)}

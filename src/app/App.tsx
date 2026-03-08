@@ -168,7 +168,7 @@ export default function App() {
   // Main app (authenticated)
   // Full-screen story/summary views
   if (appState === 'setup') {
-    return <SetupScreen onStart={handleConfigureStory} onVoiceSettings={handleVoiceSettings} />;
+    return <SetupScreen onStart={handleConfigureStory} onVoiceSettings={handleVoiceSettings} prefilledConfig={storyConfig} onBack={handleBackToDashboard} />;
   }
 
   if (appState === 'roadmap' && selectedChild) {

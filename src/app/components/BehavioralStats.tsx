@@ -81,19 +81,7 @@ export function BehavioralStats({ onBack }: BehavioralStatsProps) {
     >
       {/* Header */}
       <div className="max-w-6xl mx-auto">
-        <div className="flex items-center gap-4 mb-8">
-          <button
-            onClick={onBack}
-            className="p-2 transition-all cursor-pointer"
-            style={{
-              background: 'rgba(250, 245, 235, 0.8)',
-              border: '1px solid rgba(40, 30, 20, 0.25)',
-              boxShadow: '0 2px 5px rgba(0, 0, 0, 0.08)',
-            }}
-          >
-            <ArrowLeft className="w-5 h-5" style={{ color: 'rgba(20, 15, 10, 0.8)' }} />
-          </button>
-          
+        <div className="mb-8">
           <h1 
             style={{ 
               fontFamily: "'Indie Flower', cursive", 

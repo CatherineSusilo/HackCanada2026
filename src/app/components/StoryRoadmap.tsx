@@ -190,34 +190,13 @@ export function StoryRoadmap({ child, onBack, onStartStory }: StoryRoadmapProps)
         boxShadow: '0 2px 8px rgba(0, 0, 0, 0.08)'
       }}>
         <div className="max-w-4xl mx-auto px-6 py-5">
-          <div className="flex items-center gap-4 mb-5">
-            <button
-              onClick={onBack}
-              className="cursor-pointer transition-all p-2 rounded-full"
-              style={{ 
-                color: 'rgba(30, 20, 15, 0.6)',
-                background: 'rgba(250, 245, 235, 0.5)',
-                border: '1px solid rgba(40, 30, 20, 0.15)',
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.color = 'rgba(20, 15, 10, 0.85)';
-                e.currentTarget.style.background = 'rgba(255, 250, 240, 0.7)';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.color = 'rgba(30, 20, 15, 0.6)';
-                e.currentTarget.style.background = 'rgba(250, 245, 235, 0.5)';
-              }}
-            >
-              <ArrowLeft className="w-6 h-6" />
-            </button>
-            <div className="flex-1">
-              <h2 style={{ fontFamily: "'Indie Flower', cursive", fontSize: '32px', color: 'rgba(20, 15, 10, 0.9)', margin: 0, letterSpacing: '0.5px' }}>
-                {child.name}'s tale map
-              </h2>
-              <p style={{ fontFamily: "'Patrick Hand', cursive", fontSize: '17px', color: 'rgba(30, 20, 15, 0.65)', margin: 0 }}>
-                choose tonight's path
-              </p>
-            </div>
+          <div className="mb-5">
+            <h2 style={{ fontFamily: "'Indie Flower', cursive", fontSize: '32px', color: 'rgba(20, 15, 10, 0.9)', margin: 0, letterSpacing: '0.5px' }}>
+              {child.name}'s tale map
+            </h2>
+            <p style={{ fontFamily: "'Patrick Hand', cursive", fontSize: '17px', color: 'rgba(30, 20, 15, 0.65)', margin: 0 }}>
+              choose tonight's path
+            </p>
           </div>
 
           {/* Stats Bar */}

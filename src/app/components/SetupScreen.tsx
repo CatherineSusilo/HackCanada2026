@@ -7,7 +7,7 @@ interface SetupScreenProps {
   onStart: (profile: ChildProfile) => void;
   onBack?: () => void;
   onVoiceSettings?: () => void;
-  prefilledConfig?: {
+  prefilledConfig: {
     childId: string;
     childName: string;
     childAge: number;
@@ -18,11 +18,11 @@ interface SetupScreenProps {
 
 export function SetupScreen({ onStart, onBack, onVoiceSettings, prefilledConfig }: SetupScreenProps) {
   const api = useApi();
-  const [name, setName] = useState(prefilledConfig?.childName || '');
-  const [age, setAge] = useState(prefilledConfig?.childAge.toString() || '6');
+  const name = prefilledConfig.childName;
+  const age = prefilledConfig.childAge.toString();
   const [storytellingTone, setStorytellingTone] = useState<'calming' | 'energetic' | 'sad' | 'adventurous' | 'none'>('calming');
   const [storyLength, setStoryLength] = useState<'short' | 'medium' | 'long'>('medium');
-  const [parentPrompt, setParentPrompt] = useState(prefilledConfig ? `${prefilledConfig.theme}: ${prefilledConfig.themeDescription}` : '');
+  const [parentPrompt, setParentPrompt] = useState(`${prefilledConfig.theme}: ${prefilledConfig.themeDescription}`);
   const [uploadedImages, setUploadedImages] = useState<File[]>([]);
   const [initialState, setInitialState] = useState<'wound-up' | 'normal' | 'almost-there'>('normal');
   const [isGenerating, setIsGenerating] = useState(false);
@@ -39,13 +39,13 @@ export function SetupScreen({ onStart, onBack, onVoiceSettings, prefilledConfig 
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (name && parentPrompt) {
+    if (parentPrompt) {
       setIsGenerating(true);
       setError(null);
       
       try {
         const profile: ChildProfile = {
-          childId: prefilledConfig?.childId || '',
+          childId: prefilledConfig.childId,
           name,
           age: parseInt(age),
           storytellingTone,
@@ -122,219 +122,180 @@ export function SetupScreen({ onStart, onBack, onVoiceSettings, prefilledConfig 
             boxShadow: '0 8px 24px rgba(0, 0, 0, 0.25), inset 0 1px 2px rgba(255, 255, 255, 0.5)',
           }}
         >
-          {prefilledConfig && (
-            <div 
-              className="mb-8 pb-6 border-b"
-              style={{ borderColor: 'rgba(60, 45, 30, 0.25)' }}
+          {prefilledConfig && onBack && (
+            <button
+              type="button"
+              onClick={onBack}
+              className="mb-6 flex items-center gap-2 cursor-pointer transition-all"
+              style={{
+                fontFamily: "'Patrick Hand', cursive",
+                fontSize: '18px',
+                color: 'rgba(80, 60, 40, 0.75)',
+                background: 'transparent',
+                border: 'none',
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.color = 'rgba(60, 45, 30, 0.9)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.color = 'rgba(80, 60, 40, 0.75)';
+              }}
             >
-              <p style={{ fontFamily: "'Patrick Hand', cursive", fontSize: '17px', color: 'rgba(40, 30, 20, 0.65)', marginBottom: '6px' }}>
-                crafting a story for
-              </p>
-              <h3 style={{ fontFamily: "'Indie Flower', cursive", fontSize: '32px', color: 'rgba(20, 15, 10, 0.9)', marginBottom: '8px', letterSpacing: '0.5px' }}>
-                {prefilledConfig.childName}, age {prefilledConfig.childAge}
-              </h3>
-              <div 
-                className="mt-5 p-5 rounded-xl"
-                style={{
-                  background: 'linear-gradient(135deg, rgba(230, 210, 180, 0.5) 0%, rgba(220, 200, 170, 0.4) 100%)',
-                  border: '3px solid rgba(60, 45, 30, 0.3)',
-                  boxShadow: '0 3px 10px rgba(0, 0, 0, 0.1), inset 0 1px 2px rgba(255, 255, 255, 0.3)',
-                }}
-              >
-                <p style={{ fontFamily: "'Patrick Hand', cursive", fontSize: '16px', color: 'rgba(50, 40, 30, 0.7)', marginBottom: '4px', fontWeight: 'bold' }}>
-                  Tonight's adventure:
-                </p>
-                <p style={{ fontFamily: "'Indie Flower', cursive", fontSize: '24px', color: 'rgba(20, 15, 10, 0.9)', fontWeight: 'bold', lineHeight: '1.3' }}>
-                  {prefilledConfig.theme}
-                </p>
-              </div>
-            </div>
+              <ArrowLeft className="w-5 h-5" />
+              <span>back to tale map</span>
+            </button>
           )}
           
+          <div 
+            className="mb-8 pb-6 border-b"
+            style={{ borderColor: 'rgba(60, 45, 30, 0.25)' }}
+          >
+            <p style={{ fontFamily: "'Patrick Hand', cursive", fontSize: '17px', color: 'rgba(40, 30, 20, 0.65)', marginBottom: '6px' }}>
+              crafting a story for
+            </p>
+            <h3 style={{ fontFamily: "'Indie Flower', cursive", fontSize: '32px', color: 'rgba(20, 15, 10, 0.9)', marginBottom: '8px', letterSpacing: '0.5px' }}>
+              {prefilledConfig.childName}, age {prefilledConfig.childAge}
+            </h3>
+            <div 
+              className="mt-5 p-5 rounded-xl"
+              style={{
+                background: 'linear-gradient(135deg, rgba(230, 210, 180, 0.5) 0%, rgba(220, 200, 170, 0.4) 100%)',
+                border: '3px solid rgba(60, 45, 30, 0.3)',
+                boxShadow: '0 3px 10px rgba(0, 0, 0, 0.1), inset 0 1px 2px rgba(255, 255, 255, 0.3)',
+              }}
+            >
+              <p style={{ fontFamily: "'Patrick Hand', cursive", fontSize: '16px', color: 'rgba(50, 40, 30, 0.7)', marginBottom: '4px', fontWeight: 'bold' }}>
+                Tonight's adventure:
+              </p>
+              <p style={{ fontFamily: "'Indie Flower', cursive", fontSize: '24px', color: 'rgba(20, 15, 10, 0.9)', fontWeight: 'bold', lineHeight: '1.3' }}>
+                {prefilledConfig.theme}
+              </p>
+            </div>
+          </div>
+          
           <div className="space-y-7">
-            {!prefilledConfig && (
-              <>
-                <div>
-                  <label 
-                    className="block mb-3"
-                    style={{ fontFamily: "'Patrick Hand', cursive", fontSize: '20px', color: 'rgba(20, 15, 10, 0.8)', fontWeight: 'bold' }}
-                  >
-                    child's name
-                  </label>
-                  <input
-                    type="text"
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    className="w-full px-5 py-4 rounded-lg transition-all"
+            <div>
+              <label 
+                className="block mb-3"
+                style={{ fontFamily: "'Patrick Hand', cursive", fontSize: '20px', color: 'rgba(20, 15, 10, 0.8)', fontWeight: 'bold' }}
+              >
+                storytelling tone
+              </label>
+              <select
+                value={storytellingTone}
+                onChange={(e) => setStorytellingTone(e.target.value as any)}
+                className="w-full px-5 py-4 rounded-xl transition-all cursor-pointer"
+                style={{
+                  fontFamily: "'Patrick Hand', cursive",
+                  fontSize: '19px',
+                  color: 'rgba(15, 10, 5, 0.95)',
+                  background: 'rgba(255, 250, 245, 0.7)',
+                  border: '2px solid rgba(60, 45, 30, 0.25)',
+                  boxShadow: '0 2px 8px rgba(0, 0, 0, 0.08), inset 0 1px 2px rgba(255, 255, 255, 0.5)',
+                }}
+                required
+              >
+                <option value="calming">🌙 calming</option>
+                <option value="energetic">⚡ energetic</option>
+                <option value="sad">💙 gentle</option>
+                <option value="adventurous">✨ adventurous</option>
+                <option value="none">➖ neutral</option>
+              </select>
+            </div>
+
+            <div>
+              <label 
+                className="block mb-3"
+                style={{ fontFamily: "'Patrick Hand', cursive", fontSize: '20px', color: 'rgba(20, 15, 10, 0.8)', fontWeight: 'bold' }}
+              >
+                story length
+              </label>
+              <div className="grid grid-cols-3 gap-3">
+                {[
+                  { value: 'short', label: '5-7 min', icon: '⏱️' },
+                  { value: 'medium', label: '10-15 min', icon: '⏲️' },
+                  { value: 'long', label: '15-20 min', icon: '⏰' },
+                ].map((option) => (
+                  <button
+                    key={option.value}
+                    type="button"
+                    onClick={() => setStoryLength(option.value as any)}
+                    className="px-4 py-4 rounded-xl transition-all cursor-pointer text-center"
                     style={{
                       fontFamily: "'Patrick Hand', cursive",
-                      fontSize: '19px',
-                      color: 'rgba(15, 10, 5, 0.95)',
-                      background: 'rgba(255, 250, 245, 0.7)',
-                      border: '2px solid rgba(60, 45, 30, 0.25)',
-                      boxShadow: '0 2px 8px rgba(0, 0, 0, 0.08), inset 0 1px 2px rgba(255, 255, 255, 0.5)',
+                      fontSize: '17px',
+                      color: storyLength === option.value ? 'rgba(20, 15, 10, 0.9)' : 'rgba(40, 30, 20, 0.7)',
+                      background: storyLength === option.value 
+                        ? 'linear-gradient(135deg, rgba(200, 180, 160, 0.4) 0%, rgba(190, 170, 150, 0.3) 100%)' 
+                        : 'rgba(255, 250, 245, 0.5)',
+                      border: storyLength === option.value ? '3px solid rgba(60, 45, 30, 0.5)' : '2px solid rgba(60, 45, 30, 0.2)',
+                      boxShadow: storyLength === option.value 
+                        ? '0 4px 12px rgba(0, 0, 0, 0.15), inset 0 1px 2px rgba(255, 255, 255, 0.3)' 
+                        : '0 2px 6px rgba(0, 0, 0, 0.08)',
                     }}
-                    placeholder="their given name"
-                    required
-                  />
-                </div>
-
-                <div>
-                  <label 
-                    className="block mb-3"
-                    style={{ fontFamily: "'Patrick Hand', cursive", fontSize: '20px', color: 'rgba(20, 15, 10, 0.8)', fontWeight: 'bold' }}
                   >
-                    age
-                  </label>
-                  <input
-                    type="number"
-                    value={age}
-                    onChange={(e) => setAge(e.target.value)}
-                    className="w-full px-5 py-4 rounded-lg transition-all"
-                    style={{
-                      fontFamily: "'Patrick Hand', cursive",
-                      fontSize: '19px',
-                      color: 'rgba(15, 10, 5, 0.95)',
-                      background: 'rgba(255, 250, 245, 0.7)',
-                      border: '2px solid rgba(60, 45, 30, 0.25)',
-                      boxShadow: '0 2px 8px rgba(0, 0, 0, 0.08), inset 0 1px 2px rgba(255, 255, 255, 0.5)',
-                    }}
-                    min="3"
-                    max="12"
-                    required
-                  />
-                </div>
-              </>
-            )}
-
-            {!prefilledConfig && (
-              <>
-                <div>
-                  <label 
-                    className="block mb-3"
-                    style={{ fontFamily: "'Patrick Hand', cursive", fontSize: '20px', color: 'rgba(20, 15, 10, 0.8)', fontWeight: 'bold' }}
-                  >
-                    storytelling tone
-                  </label>
-                  <select
-                    value={storytellingTone}
-                    onChange={(e) => setStorytellingTone(e.target.value as any)}
-                    className="w-full px-5 py-4 rounded-lg transition-all cursor-pointer"
-                    style={{
-                      fontFamily: "'Patrick Hand', cursive",
-                      fontSize: '19px',
-                      color: 'rgba(15, 10, 5, 0.95)',
-                      background: 'rgba(255, 250, 245, 0.7)',
-                      border: '2px solid rgba(60, 45, 30, 0.25)',
-                      boxShadow: '0 2px 8px rgba(0, 0, 0, 0.08), inset 0 1px 2px rgba(255, 255, 255, 0.5)',
-                    }}
-                    required
-                  >
-                    <option value="calming">🌙 calming</option>
-                    <option value="energetic">⚡ energetic</option>
-                    <option value="sad">💙 gentle</option>
-                    <option value="adventurous">✨ adventurous</option>
-                    <option value="none">➖ neutral</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label 
-                    className="block mb-3"
-                    style={{ fontFamily: "'Patrick Hand', cursive", fontSize: '20px', color: 'rgba(20, 15, 10, 0.8)', fontWeight: 'bold' }}
-                  >
-                    story length
-                  </label>
-                  <div className="grid grid-cols-3 gap-3">
-                    {[
-                      { value: 'short', label: '5-7 min', icon: '⏱️' },
-                      { value: 'medium', label: '10-15 min', icon: '⏲️' },
-                      { value: 'long', label: '15-20 min', icon: '⏰' },
-                    ].map((option) => (
-                      <button
-                        key={option.value}
-                        type="button"
-                        onClick={() => setStoryLength(option.value as any)}
-                        className="px-4 py-4 rounded-xl transition-all cursor-pointer text-center"
-                        style={{
-                          fontFamily: "'Patrick Hand', cursive",
-                          fontSize: '17px',
-                          color: storyLength === option.value ? 'rgba(20, 15, 10, 0.9)' : 'rgba(40, 30, 20, 0.7)',
-                          background: storyLength === option.value 
-                            ? 'linear-gradient(135deg, rgba(200, 180, 160, 0.4) 0%, rgba(190, 170, 150, 0.3) 100%)' 
-                            : 'rgba(255, 250, 245, 0.5)',
-                          border: storyLength === option.value ? '3px solid rgba(60, 45, 30, 0.5)' : '2px solid rgba(60, 45, 30, 0.2)',
-                          boxShadow: storyLength === option.value 
-                            ? '0 4px 12px rgba(0, 0, 0, 0.15), inset 0 1px 2px rgba(255, 255, 255, 0.3)' 
-                            : '0 2px 6px rgba(0, 0, 0, 0.08)',
-                        }}
-                      >
-                        <div className="text-2xl mb-1">{option.icon}</div>
-                        <div style={{ fontSize: '15px', fontWeight: 'bold' }}>{option.label}</div>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              </>
-            )}
-
-            {!prefilledConfig && (
-              <div>
-                <label 
-                  className="block mb-3"
-                  style={{ fontFamily: "'Patrick Hand', cursive", fontSize: '20px', color: 'rgba(20, 15, 10, 0.8)', fontWeight: 'bold' }}
-                >
-                  story theme
-                </label>
-                
-                {/* Quick prompts */}
-                <div className="grid grid-cols-2 gap-3 mb-4">
-                  {storyPrompts.map((prompt, idx) => (
-                    <button
-                      key={idx}
-                      type="button"
-                      onClick={() => setParentPrompt(prompt.text)}
-                      className="px-4 py-3 rounded-xl transition-all cursor-pointer text-left"
-                      style={{
-                        fontFamily: "'Patrick Hand', cursive",
-                        fontSize: '16px',
-                        color: 'rgba(30, 20, 15, 0.8)',
-                        background: 'rgba(255, 250, 245, 0.6)',
-                        border: '2px solid rgba(60, 45, 30, 0.2)',
-                        boxShadow: '0 2px 6px rgba(0, 0, 0, 0.08)',
-                      }}
-                      onMouseEnter={(e) => {
-                        e.currentTarget.style.background = 'linear-gradient(135deg, rgba(230, 210, 190, 0.4) 0%, rgba(220, 200, 180, 0.3) 100%)';
-                        e.currentTarget.style.borderColor = 'rgba(60, 45, 30, 0.35)';
-                      }}
-                      onMouseLeave={(e) => {
-                        e.currentTarget.style.background = 'rgba(255, 250, 245, 0.6)';
-                        e.currentTarget.style.borderColor = 'rgba(60, 45, 30, 0.2)';
-                      }}
-                    >
-                      <span className="mr-1">{prompt.emoji}</span>
-                      {prompt.text}
-                    </button>
-                  ))}
-                </div>
-
-                <textarea
-                  value={parentPrompt}
-                  onChange={(e) => setParentPrompt(e.target.value)}
-                  className="w-full px-5 py-4 rounded-xl transition-all min-h-[120px] resize-y"
-                  style={{
-                    fontFamily: "'Patrick Hand', cursive",
-                    fontSize: '19px',
-                    color: 'rgba(15, 10, 5, 0.95)',
-                    background: 'rgba(255, 250, 245, 0.7)',
-                    border: '2px solid rgba(60, 45, 30, 0.25)',
-                    boxShadow: '0 2px 8px rgba(0, 0, 0, 0.08), inset 0 1px 2px rgba(255, 255, 255, 0.5)',
-                  }}
-                  placeholder="describe the tale you seek... (e.g., 'a journey through enchanted woods')"
-                  required
-                />
+                    <div className="text-2xl mb-1">{option.icon}</div>
+                    <div style={{ fontSize: '15px', fontWeight: 'bold' }}>{option.label}</div>
+                  </button>
+                ))}
               </div>
-            )}
+            </div>
+
+            <div>
+              <label 
+                className="block mb-3"
+                style={{ fontFamily: "'Patrick Hand', cursive", fontSize: '20px', color: 'rgba(20, 15, 10, 0.8)', fontWeight: 'bold' }}
+              >
+                story theme
+              </label>
+              
+              {/* Quick prompts */}
+              <div className="grid grid-cols-2 gap-3 mb-4">
+                {storyPrompts.map((prompt, idx) => (
+                  <button
+                    key={idx}
+                    type="button"
+                    onClick={() => setParentPrompt(prompt.text)}
+                    className="px-4 py-3 rounded-xl transition-all cursor-pointer text-left"
+                    style={{
+                      fontFamily: "'Patrick Hand', cursive",
+                      fontSize: '16px',
+                      color: 'rgba(30, 20, 15, 0.8)',
+                      background: 'rgba(255, 250, 245, 0.6)',
+                      border: '2px solid rgba(60, 45, 30, 0.2)',
+                      boxShadow: '0 2px 6px rgba(0, 0, 0, 0.08)',
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.background = 'linear-gradient(135deg, rgba(230, 210, 190, 0.4) 0%, rgba(220, 200, 180, 0.3) 100%)';
+                      e.currentTarget.style.borderColor = 'rgba(60, 45, 30, 0.35)';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.background = 'rgba(255, 250, 245, 0.6)';
+                      e.currentTarget.style.borderColor = 'rgba(60, 45, 30, 0.2)';
+                    }}
+                  >
+                    <span className="mr-1">{prompt.emoji}</span>
+                    {prompt.text}
+                  </button>
+                ))}
+              </div>
+
+              <textarea
+                value={parentPrompt}
+                onChange={(e) => setParentPrompt(e.target.value)}
+                className="w-full px-5 py-4 rounded-xl transition-all min-h-[120px] resize-y"
+                style={{
+                  fontFamily: "'Patrick Hand', cursive",
+                  fontSize: '19px',
+                  color: 'rgba(15, 10, 5, 0.95)',
+                  background: 'rgba(255, 250, 245, 0.7)',
+                  border: '2px solid rgba(60, 45, 30, 0.25)',
+                  boxShadow: '0 2px 8px rgba(0, 0, 0, 0.08), inset 0 1px 2px rgba(255, 255, 255, 0.5)',
+                }}
+                placeholder="describe the tale you seek... (e.g., 'a journey through enchanted woods')"
+                required
+              />
+            </div>
 
             <div>
               <label 

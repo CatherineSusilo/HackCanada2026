@@ -83,19 +83,6 @@ export function StoryScreen({ profile, onComplete }: StoryScreenProps) {
       }).then(s => setStorySessionId(s.id)).catch(e => console.warn('Session save failed:', e));
     }
 
-    // Try ElevenLabs audio (fire-and-forget, story works without it)
-    const voiceId = localStorage.getItem('ai_selected_voice');
-    api.generateAudio(fullStory, voiceId || undefined)
-      .then(blob => {
-        if (blob && blob.size > 0) {
-          const url = URL.createObjectURL(blob);
-          const audio = new Audio(url);
-          audioRef.current = audio;
-          audio.play().catch(() => {});
-        }
-      })
-      .catch(() => console.log('ElevenLabs unavailable, using browser TTS'));
-
     // Preload first image
     generateImageForIndex(0);
 
@@ -137,7 +124,76 @@ export function StoryScreen({ profile, onComplete }: StoryScreenProps) {
     return () => clearInterval(iv);
   }, [isPlaying, storyDone]);
 
-  // Speak paragraphs via browser TTS (primary driver for timing)
+  // Speak paragraph using ElevenLabs
+  const speakParagraph = async (text: string) => {
+    if (!text) return;
+    setIsSpeaking(true);
+
+    // Calculate drift score, optionally boosted by vitals data
+    let newScore = calculateDriftScore(profile.initialState, elapsedSeconds);
+    
+    // If vitals are connected, blend the scores
+    if (vitalsConnected) {
+      const vitalsScore = vitalsSleepiness * 100;
+      newScore = (newScore * 0.6) + (vitalsScore * 0.4); // 60% time-based, 40% vitals-based
+    }
+    
+    setDriftScore(newScore);
+    setDriftHistory((prev) => [...prev, newScore]);
+
+    try {
+      // Voice mapping for different storytelling tones
+      const voiceMap: Record<string, string> = {
+        calming: 'XhNlP8uwiH6XZSFnH1yL',    // Elizabeth
+        energetic: 'V2bPluzT7MuirpucVAKH',   // Frank
+        sad: 'wScwPA1qCkWo5R2dmlS8',         // Charlotte
+        adventurous: 'kSIyQ8cADEzDIL2F7AbG', // Niel
+        none: 'XhNlP8uwiH6XZSFnH1yL',        // Elizabeth - default
+      };
+
+      const voiceId = voiceMap[profile.storytellingTone] || localStorage.getItem('ai_selected_voice') || 'JBFqnCBsd6RMkjVDRZzb';
+
+      const response = await fetch('http://localhost:3001/api/generate-audio', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ story: text, voiceId }),
+      });
+
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      const audio = new Audio(url);
+
+      audio.onended = () => {
+        setIsSpeaking(false);
+        if (currentParagraphIndex >= paragraphs.length - 1 || newScore >= 90) {
+          completeStory();
+        } else {
+          setCurrentParagraphIndex((prev) => prev + 1);
+        }
+      };
+
+      audio.onerror = () => {
+        console.error('Audio playback failed');
+        setIsSpeaking(false);
+        // Move to next paragraph anyway
+        if (currentParagraphIndex < paragraphs.length - 1) {
+          setCurrentParagraphIndex((prev) => prev + 1);
+        }
+      };
+
+      audio.play();
+
+    } catch (error) {
+      console.error('ElevenLabs audio failed:', error);
+      setIsSpeaking(false);
+      // Move to next paragraph anyway
+      if (currentParagraphIndex < paragraphs.length - 1) {
+        setCurrentParagraphIndex((prev) => prev + 1);
+      }
+    }
+  };
+
+  // Trigger paragraph playback
   useEffect(() => {
     if (!isPlaying || currentParagraphIndex >= paragraphs.length || isSpeaking || storyDone) return;
 
@@ -164,49 +220,13 @@ export function StoryScreen({ profile, onComplete }: StoryScreenProps) {
       }
     }
 
-    if ('speechSynthesis' in window) {
-      window.speechSynthesis.cancel();
-      setIsSpeaking(true);
-
-      // Calculate drift score, optionally boosted by vitals data
-      let newScore = calculateDriftScore(profile.initialState, elapsedSeconds);
-      
-      // If vitals are connected, blend the scores
-      if (vitalsConnected) {
-        const vitalsScore = vitalsSleepiness * 100;
-        newScore = (newScore * 0.6) + (vitalsScore * 0.4); // 60% time-based, 40% vitals-based
-      }
-      
-      setDriftScore(newScore);
-      setDriftHistory((prev) => [...prev, newScore]);
-
-      const utterance = new SpeechSynthesisUtterance(text);
-      utterance.rate = Math.max(0.6, 1.0 - newScore / 200);
-      utterance.volume = Math.max(0.4, 1.0 - newScore / 150);
-      utterance.pitch = Math.max(0.8, 1.0 - newScore / 400);
-
-      const voices = window.speechSynthesis.getVoices();
-      const voice = voices.find(v => v.lang.startsWith('en')) || voices[0];
-      if (voice) utterance.voice = voice;
-
-      utterance.onend = () => {
-        setIsSpeaking(false);
-        if (currentParagraphIndex >= paragraphs.length - 1 || newScore >= 90) {
-          completeStory();
-        } else {
-          setCurrentParagraphIndex(p => p + 1);
-        }
-      };
-
-      window.speechSynthesis.speak(utterance);
-    }
+    // Speak the paragraph using ElevenLabs
+    speakParagraph(text);
   }, [isPlaying, currentParagraphIndex, isSpeaking, storyDone]);
 
   const completeStory = async () => {
     setStoryDone(true);
     setIsPlaying(false);
-    window.speechSynthesis.cancel();
-    if (audioRef.current) audioRef.current.pause();
 
     const totalMin = Math.floor(elapsedSeconds / 60);
     const remSec = elapsedSeconds % 60;
@@ -235,12 +255,6 @@ export function StoryScreen({ profile, onComplete }: StoryScreenProps) {
   };
 
   const togglePlayPause = () => {
-    if (audioRef.current) {
-      if (isPlaying) audioRef.current.pause();
-      else audioRef.current.play().catch(() => {});
-    }
-    if (isPlaying) window.speechSynthesis.pause();
-    else window.speechSynthesis.resume();
     setIsPlaying(!isPlaying);
   };
 
