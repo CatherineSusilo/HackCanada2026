@@ -10,6 +10,7 @@
     "start": "npm run server & npm run dev"
   },
   "dependencies": {
+    "@auth0/auth0-react": "^2.15.0",
     "@emotion/react": "11.14.0",
     "@emotion/styled": "11.14.1",
     "@fal-ai/client": "^1.9.4",

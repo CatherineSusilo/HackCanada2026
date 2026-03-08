@@ -1,0 +1,507 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+  <title>StoryDrift</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Patrick+Hand&family=Indie+Flower&display=swap" rel="stylesheet">
+</head>
+<style>
+  body, html {
+    height: 100%;
+    margin: 0;
+    padding: 0;
+    font-family: 'Patrick Hand', cursive;
+    background-color: #e4d5b7;
+    background-image: url('https://www.toptal.com/designers/subtlepatterns/patterns/old_map.png');
+    background-size: 400px 400px;
+  }
+
+  .invisible {
+    display: none !important;
+  }
+
+  /* Parchment overlay effects */
+  body::before {
+    content: '';
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: 
+      radial-gradient(ellipse at 15% 20%, rgba(90, 70, 50, 0.08) 0%, transparent 45%),
+      radial-gradient(ellipse at 85% 75%, rgba(80, 60, 40, 0.06) 0%, transparent 40%),
+      radial-gradient(ellipse at 45% 85%, rgba(100, 80, 60, 0.05) 0%, transparent 35%),
+      linear-gradient(180deg, 
+        rgba(244, 232, 208, 0.5) 0%, 
+        rgba(235, 224, 203, 0.3) 50%,
+        rgba(244, 232, 208, 0.5) 100%
+      );
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .login-container {
+    position: relative;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1;
+  }
+
+  .login-box {
+    position: relative;
+    width: 100%;
+    max-width: 380px;
+    padding: 20px;
+    background: transparent;
+    margin: 0 15px;
+  }
+
+  .login-header {
+    text-align: center;
+    margin-bottom: 24px;
+  }
+
+  .login-header img {
+    width: 110px;
+    margin-bottom: 10px;
+    opacity: 0.9;
+    filter: sepia(0.1) contrast(1.1);
+  }
+
+  .login-header h3 {
+    font-family: 'Indie Flower', cursive;
+    font-size: 36px;
+    color: rgba(20, 15, 10, 0.85);
+    margin: 4px 0;
+    letter-spacing: 2px;
+    font-weight: normal;
+  }
+
+  .login-header h5 {
+    font-size: 17px;
+    color: rgba(30, 20, 15, 0.7);
+    font-weight: normal;
+    letter-spacing: 0.5px;
+    margin: 4px 0;
+  }
+
+  #error-message {
+    display: none;
+    background: rgba(139, 0, 0, 0.06);
+    border: 1px solid rgba(139, 0, 0, 0.2);
+    padding: 10px;
+    margin-bottom: 15px;
+    color: rgba(80, 40, 30, 0.8);
+    font-size: 15px;
+    text-align: center;
+    box-shadow: 0 2px 6px rgba(139, 0, 0, 0.1);
+    border-radius: 0;
+    white-space: break-spaces;
+  }
+
+  .form-group {
+    margin-bottom: 16px;
+  }
+
+  .form-group label {
+    display: block;
+    font-size: 18px;
+    color: rgba(20, 15, 10, 0.75);
+    margin-bottom: 5px;
+    font-weight: normal;
+  }
+
+  .form-control {
+    width: 100%;
+    padding: 10px 14px;
+    background: rgba(250, 245, 235, 0.4);
+    border: 1px solid rgba(40, 30, 20, 0.25);
+    font-family: 'Patrick Hand', cursive;
+    font-size: 18px;
+    color: rgba(15, 10, 5, 0.9);
+    transition: all 0.25s ease;
+    box-shadow: 
+      0 2px 5px rgba(0, 0, 0, 0.08),
+      inset 0 1px 2px rgba(0, 0, 0, 0.05);
+    border-radius: 0;
+    height: auto;
+    box-sizing: border-box;
+  }
+
+  .form-control:focus {
+    outline: none;
+    background: rgba(255, 250, 240, 0.5);
+    border-color: rgba(40, 30, 20, 0.4);
+    box-shadow: 
+      0 2px 8px rgba(0, 0, 0, 0.12),
+      inset 0 1px 2px rgba(0, 0, 0, 0.06);
+  }
+
+  .form-control::placeholder {
+    color: rgba(60, 50, 40, 0.4);
+  }
+
+  .btn {
+    width: 100%;
+    padding: 12px;
+    font-family: 'Patrick Hand', cursive;
+    font-size: 19px;
+    font-weight: normal;
+    cursor: pointer;
+    transition: all 0.25s ease;
+    border-radius: 0;
+    border: 1px solid rgba(30, 20, 15, 0.3);
+    box-sizing: border-box;
+  }
+
+  .btn-primary {
+    background: rgba(60, 50, 40, 0.08);
+    color: rgba(20, 15, 10, 0.8);
+    box-shadow: 
+      0 2px 6px rgba(0, 0, 0, 0.1),
+      inset 0 1px 1px rgba(255, 255, 255, 0.1);
+  }
+
+  .btn-primary:hover,
+  .btn-primary:focus {
+    background: rgba(60, 50, 40, 0.12);
+    border-color: rgba(30, 20, 15, 0.4);
+    box-shadow: 
+      0 3px 10px rgba(0, 0, 0, 0.15),
+      inset 0 1px 1px rgba(255, 255, 255, 0.15);
+    color: rgba(20, 15, 10, 0.8);
+  }
+
+  .btn-primary:active {
+    box-shadow: 
+      0 1px 4px rgba(0, 0, 0, 0.1),
+      inset 0 1px 3px rgba(0, 0, 0, 0.1);
+  }
+
+  .btn-default {
+    background: rgba(250, 245, 235, 0.35);
+    color: rgba(25, 20, 15, 0.75);
+    border: 1px solid rgba(40, 30, 20, 0.25);
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.08);
+  }
+
+  .btn-default:hover,
+  .btn-default:focus {
+    background: rgba(255, 250, 240, 0.45);
+    border-color: rgba(40, 30, 20, 0.35);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+    color: rgba(25, 20, 15, 0.75);
+  }
+
+  .btn-danger {
+    margin-top: 6px;
+  }
+
+  .btn-block {
+    display: block;
+    width: 100%;
+    margin-bottom: 8px;
+  }
+
+  hr {
+    border: none;
+    height: 1px;
+    background: rgba(40, 30, 20, 0.25);
+    margin: 18px 0 16px;
+  }
+
+  .form-group a {
+    color: rgba(30, 20, 15, 0.7);
+    text-decoration: none;
+    cursor: pointer;
+    transition: color 0.25s ease;
+  }
+
+  .form-group a:hover {
+    color: rgba(20, 15, 10, 0.85);
+    text-decoration: none;
+  }
+
+  .form-group span {
+    font-size: 16px;
+    color: rgba(40, 30, 20, 0.6);
+  }
+
+  button:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+
+  .captcha-container {
+    margin-bottom: 12px;
+  }
+
+  * {
+    box-sizing: border-box;
+  }
+</style>
+<body>
+  <div class="login-container">
+    <div class="login-box">
+      <div class="login-header">
+        <img src="https://raw.githubusercontent.com/DzhanybekZakiriiaev/logo/refs/heads/main/logo.png" alt="StoryDrift"/>
+        <h3>StoryDrift</h3>
+        <h5>where dreams begin</h5>
+      </div>
+      <div id="error-message" class="alert alert-danger"></div>
+      <form onsubmit="return false;" method="post">
+        <div class="form-group" id="name-fields" style="display: none;">
+          <label for="first-name">first name</label>
+          <input
+            type="text"
+            class="form-control"
+            id="first-name"
+            placeholder="your first name">
+        </div>
+        <div class="form-group" id="surname-fields" style="display: none;">
+          <label for="last-name">last name</label>
+          <input
+            type="text"
+            class="form-control"
+            id="last-name"
+            placeholder="your last name">
+        </div>
+        <div class="form-group">
+         <label for="email">email</label>
+          <input
+            type="email"
+            class="form-control"
+            id="email"
+            placeholder="where stories find you">
+        </div>
+        <div class="form-group">
+          <label for="password">password</label>
+          <input
+            type="password"
+            class="form-control"
+            id="password"
+            placeholder="secret words">
+        </div>
+        <div class="captcha-container form-group"></div>
+        <button
+          type="submit"
+          id="btn-login"
+          class="btn btn-primary btn-block">
+            enter
+        </button>
+         <button
+          type="button"
+          id="btn-signup"
+          class="btn btn-primary btn-block invisible">
+            create account
+        </button>
+        <button
+          type="button"
+          id="btn-google"
+          class="btn btn-default btn-danger btn-block">
+            continue with google
+        </button>
+         <hr>
+        <div class="form-group" style="text-align: center; margin-top: 18px;">
+          <span id="login-signup-msg">need a key?</span> <a id="link-signup-login">make one</a>
+        </div>
+      </form>
+      <p style="text-align: center; margin-top: 20px; font-size: 15px; color: rgba(40, 30, 20, 0.55);">
+        i solemnly swear i seek good dreams
+      </p>
+    </div>
+  </div>
+
+  <!--[if IE 8]>
+  <script src="//cdnjs.cloudflare.com/ajax/libs/ie8/0.2.5/ie8.js"></script>
+  <![endif]-->
+
+  <!--[if lte IE 9]>
+  <script src="https://cdn.auth0.com/js/polyfills/1.0/base64.min.js"></script>
+  <script src="https://cdn.auth0.com/js/polyfills/1.0/es5-shim.min.js"></script>
+  <![endif]-->
+
+  <script src="https://cdn.auth0.com/js/auth0/9.28/auth0.min.js"></script>
+  <script src="https://cdn.auth0.com/js/polyfills/1.0/object-assign.min.js"></script>
+  <script>
+    window.addEventListener('load', function() {
+
+      var config = JSON.parse(
+        decodeURIComponent(escape(window.atob('@@config@@')))
+      );
+
+      var leeway = config.internalOptions.leeway;
+      if (leeway) {
+        var convertedLeeway = parseInt(leeway);
+
+        if (!isNaN(convertedLeeway)) {
+          config.internalOptions.leeway = convertedLeeway;
+        }
+      }
+
+      var params = {
+        overrides: {
+          __tenant: config.auth0Tenant,
+          __token_issuer: config.authorizationServer.issuer
+        },
+        domain: config.auth0Domain,
+        clientID: config.clientID,
+        redirectUri: config.callbackURL,
+        responseType: 'code',
+        scope: config.internalOptions.scope,
+        _csrf: config.internalOptions._csrf,
+        state: config.internalOptions.state,
+        _intstate: config.internalOptions._intstate
+      };
+
+      var triggerCaptcha = null;
+      var signupCaptcha = null;
+      var webAuth = new auth0.WebAuth(params);
+      var databaseConnection = 'Username-Password-Authentication';
+      var captcha = webAuth.renderCaptcha(
+        document.querySelector('.captcha-container'),
+        null,
+        (error, payload) => {
+          if (payload) {
+            triggerCaptcha = payload.triggerCaptcha;
+          }
+        }
+      );
+
+      function login(e) {
+        e.preventDefault();
+        var button = this;
+        var username = document.getElementById('email').value;
+        var password = document.getElementById('password').value;
+        button.disabled = true;
+
+        var request = () => {
+          webAuth.login({
+            realm: databaseConnection,
+            username: username,
+            password: password,
+            captcha: captcha.getValue()
+          }, function(err) {
+            if (err) displayError(err);
+            button.disabled = false;
+          });
+        };
+
+        if (triggerCaptcha) {
+          triggerCaptcha(request);
+        } else {
+          request();
+        }
+      }
+
+      function toggleSignupLogin(e) {
+        e.preventDefault();
+        var loginSignupLink = e.target;
+        var loginBtn = document.getElementById('btn-login');
+        var googleBtn = document.getElementById('btn-google');
+        var signupBtn = document.getElementById('btn-signup');
+        var msg = document.getElementById('login-signup-msg');
+        var nameFields = document.getElementById('name-fields');
+        var surnameFields = document.getElementById('surname-fields');
+        
+        loginBtn.classList.toggle('invisible');
+        googleBtn.classList.toggle('invisible');
+        signupBtn.classList.toggle('invisible');
+
+        if (signupBtn.classList.contains('invisible')) {
+          // Switching to login mode
+          loginSignupLink.innerHTML = "make one";
+          msg.innerHTML = "need a key?"
+          nameFields.style.display = 'none';
+          surnameFields.style.display = 'none';
+
+          captcha = webAuth.renderCaptcha(
+            document.querySelector('.captcha-container'),
+            null,
+            (error, payload) => {
+              if (payload) {
+                triggerCaptcha = payload.triggerCaptcha;
+              }
+            }
+          );
+        } else {
+          // Switching to signup mode
+          loginSignupLink.innerHTML = "come back";
+          msg.innerHTML = "already have a key?"
+          nameFields.style.display = 'block';
+          surnameFields.style.display = 'block';
+
+          signupCaptcha = webAuth.renderSignupCaptcha(
+            document.querySelector('.captcha-container'),
+            null,
+            (error, payload) => {
+              if (payload) {
+                triggerCaptcha = payload.triggerCaptcha;
+              }
+            }
+          );
+        }
+      }
+
+      function signup() {
+        var button = this;
+        var email = document.getElementById('email').value;
+        var password = document.getElementById('password').value;
+        var firstName = document.getElementById('first-name').value;
+        var lastName = document.getElementById('last-name').value;
+        button.disabled = true;
+
+        var request = () => {
+          webAuth.redirect.signupAndLogin({
+            connection: databaseConnection,
+            email: email,
+            password: password,
+            captcha: signupCaptcha.getValue(),
+            user_metadata: {
+              given_name: firstName,
+              family_name: lastName
+            },
+            name: firstName + ' ' + lastName
+          }, function(err) {
+            if (err) displayError(err);
+            button.disabled = false;
+          });
+        };
+
+        if (triggerCaptcha) {
+          triggerCaptcha(request);
+        } else {
+          request();
+        }
+      }
+
+      function loginWithGoogle() {
+        webAuth.authorize({
+          connection: 'google-oauth2'
+        }, function(err) {
+          if (err) displayError(err);
+        });
+      }
+
+      function displayError(err) {
+        captcha.reload();
+        var errorMessage = document.getElementById('error-message');
+        errorMessage.innerText = err.policy || err.description;
+        errorMessage.style.display = 'block';
+      }
+
+      document.getElementById('btn-login').addEventListener('click', login);
+      document.getElementById('btn-google').addEventListener('click', loginWithGoogle);
+      document.getElementById('btn-signup').addEventListener('click', signup);
+      document.getElementById('link-signup-login').addEventListener('click', toggleSignupLogin);
+    });
+  </script>
+</body>
+</html>
