@@ -17,10 +17,10 @@ interface Child {
 
 interface ChildDashboardProps {
   onSelectChild: (child: Child) => void;
-  onAddChild: () => void;
+  onStartOnboarding: () => void;
 }
 
-export function ChildDashboard({ onSelectChild, onAddChild }: ChildDashboardProps) {
+export function ChildDashboard({ onSelectChild, onStartOnboarding }: ChildDashboardProps) {
   const { user, logout } = useAuth0();
   const api = useApi();
   const [children, setChildren] = useState<Child[]>([]);
@@ -201,7 +201,7 @@ export function ChildDashboard({ onSelectChild, onAddChild }: ChildDashboardProp
               transition={{ delay: children.length * 0.1 }}
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
-              onClick={onAddChild}
+              onClick={onStartOnboarding}
               className="relative p-6 backdrop-blur-sm transition-all group h-full min-h-[120px] flex items-center justify-center cursor-pointer"
               style={{
                 background: 'rgba(250, 245, 235, 0.4)',

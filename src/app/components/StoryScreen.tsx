@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
+import { Moon, X, Info } from 'lucide-react';
 import type { ChildProfile, StorySummary } from '../App';
 import { DriftMeter } from './DriftMeter';
 import VitalsMonitor from './VitalsMonitor';
@@ -27,12 +28,37 @@ export function StoryScreen({ profile, onComplete }: StoryScreenProps) {
   const [driftHistory, setDriftHistory] = useState<number[]>([0]);
   const [vitalsConnected, setVitalsConnected] = useState(false);
   const [vitalsSleepiness, setVitalsSleepiness] = useState(0);
+  const [storyDone, setStoryDone] = useState(false);
+  const [storySessionId, setStorySessionId] = useState<string | null>(null);
+  const [showHint, setShowHint] = useState(true);
+  const [isPanelOpen, setIsPanelOpen] = useState(false);
 
   const imagePromptsRef = useRef<any[]>((window as any).storyImagePrompts || []);
   const startTimeRef = useRef(Date.now());
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const generatedImagesRef = useRef<Map<number, string>>(new Map());
   const imageGenInProgressRef = useRef<Set<number>>(new Set());
+
+  const storyTitle = 'Bedtime Story';
+  const backgroundImage = bgImage;
+
+  const formatTime = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  };
+
+  const handleVitalsUpdate = (sleepiness: number, isAsleep: boolean) => {
+    setVitalsConnected(true);
+    setVitalsSleepiness(sleepiness);
+    
+    // If vitals show child is asleep, boost drift score
+    if (isAsleep) {
+      const boostedScore = Math.min(100, driftScore + 20);
+      setDriftScore(boostedScore);
+      setDriftHistory((prev) => [...prev, boostedScore]);
+    }
+  };
 
   useEffect(() => {
     const score = calculateDriftScore(profile.initialState, 0);
@@ -138,18 +164,6 @@ export function StoryScreen({ profile, onComplete }: StoryScreenProps) {
       }
     }
 
-  }, [ishandleVitalsUpdate = (sleepiness: number, isAsleep: boolean) => {
-    setVitalsConnected(true);
-    setVitalsSleepiness(sleepiness);
-    
-    // If vitals show child is asleep, boost drift score
-    if (isAsleep) {
-      const boostedScore = Math.min(100, driftScore + 20);
-      setDriftScore(boostedScore);
-      setDriftHistory((prev) => [...prev, boostedScore]);
-    }
-  };
-
     if ('speechSynthesis' in window) {
       window.speechSynthesis.cancel();
       setIsSpeaking(true);
@@ -163,8 +177,6 @@ export function StoryScreen({ profile, onComplete }: StoryScreenProps) {
         newScore = (newScore * 0.6) + (vitalsScore * 0.4); // 60% time-based, 40% vitals-based
       }
       
-
-      const newScore = calculateDriftScore(profile.initialState, elapsedSeconds);
       setDriftScore(newScore);
       setDriftHistory((prev) => [...prev, newScore]);
 
@@ -175,18 +187,18 @@ export function StoryScreen({ profile, onComplete }: StoryScreenProps) {
 
       const voices = window.speechSynthesis.getVoices();
       const voice = voices.find(v => v.lang.startsWith('en')) || voices[0];
-      if (voice) utt.voice = voice;
+      if (voice) utterance.voice = voice;
 
-      utt.onend = () => {
+      utterance.onend = () => {
         setIsSpeaking(false);
-        if (currentParagraphIndex >= paragraphs.length - 1 || score >= 90) {
+        if (currentParagraphIndex >= paragraphs.length - 1 || newScore >= 90) {
           completeStory();
         } else {
           setCurrentParagraphIndex(p => p + 1);
         }
       };
 
-      window.speechSynthesis.speak(utt);
+      window.speechSynthesis.speak(utterance);
     }
   }, [isPlaying, currentParagraphIndex, isSpeaking, storyDone]);
 
@@ -210,7 +222,7 @@ export function StoryScreen({ profile, onComplete }: StoryScreenProps) {
           sleepOnsetTime: new Date().toISOString(),
           completed: true,
           finalDriftScore: Math.round(driftScore),
-          driftScoreHistory: driftHistory.map(s => Math.round(s)),
+          driftScoreHistory: driftHistory.map((s: number) => Math.round(s)),
         });
       } catch (e) {
         console.warn('Failed to save final session:', e);
@@ -380,6 +392,7 @@ export function StoryScreen({ profile, onComplete }: StoryScreenProps) {
       </AnimatePresence>
 
       <link href="https://fonts.googleapis.com/css2?family=Patrick+Hand&family=Indie+Flower&display=swap" rel="stylesheet" />
+      </div>
     </div>
   );
 }

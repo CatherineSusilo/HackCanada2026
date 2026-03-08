@@ -130,6 +130,11 @@ export default function App() {
     setAppState('dashboard');
   };
 
+  const handleVoiceSettings = () => {
+    setSidebarView('ai-settings');
+    setAppState('dashboard');
+  };
+
   // Loading state
   if (isLoading || (isAuthenticated && isInitializing)) {
     return (
@@ -161,15 +166,57 @@ export default function App() {
   }
 
   // Main app (authenticated)
+  // Full-screen story/summary views
+  if (appState === 'setup') {
+    return <SetupScreen onStart={handleConfigureStory} onVoiceSettings={handleVoiceSettings} />;
+  }
+
+  if (appState === 'roadmap' && selectedChild) {
+    return <StoryRoadmap child={selectedChild} onStartStory={handleStartStory} onBack={handleBackToDashboard} />;
+  }
+
+  if (appState === 'story' && childProfile) {
+    return <StoryScreen profile={childProfile} onComplete={handleStoryComplete} />;
+  }
+
+  if (appState === 'summary' && storySummary) {
+    return <SummaryScreen summary={storySummary} onStartOver={handleBackToDashboard} />;
+  }
+
+  // Dashboard with sidebar
   return (
-    <div className="min-h-full w-full bg-gradient-to-br from-indigo-950 via-purple-900 to-slate-900">
-      {appState === 'setup' && <SetupScreen onStart={handleStartStory} />}
-      {appState === 'story' && childProfile && (
-        <StoryScreen profile={childProfile} onComplete={handleStoryComplete} />
-      )}
-      {appState === 'summary' && storySummary && (
-        <SummaryScreen summary={storySummary} onStartOver={handleBackToDashboard} />
-      )}
-    </>
+    <div className="min-h-full w-full bg-gradient-to-br from-indigo-950 via-purple-900 to-slate-900 flex">
+      <Sidebar view={sidebarView} onViewChange={handleSidebarViewChange} />
+      
+      <div className="flex-1 overflow-auto">
+        {sidebarView === 'dashboard' && appState === 'dashboard' && (
+          <ChildDashboard onSelectChild={handleSelectChild} onStartOnboarding={handleStartOnboarding} />
+        )}
+        
+        {appState === 'onboarding' && (
+          <ChildOnboarding onComplete={handleOnboardingComplete} />
+        )}
+        
+        {sidebarView === 'stats' && (
+          <BehavioralStats />
+        )}
+        
+        {sidebarView === 'archive' && (
+          <StoryArchive />
+        )}
+        
+        {sidebarView === 'drawings' && (
+          <DrawingsManager />
+        )}
+        
+        {sidebarView === 'themes' && (
+          <StoryThemes />
+        )}
+        
+        {sidebarView === 'ai-settings' && (
+          <AISettings />
+        )}
+      </div>
+    </div>
   );
 }
