@@ -114,7 +114,7 @@ Each prompt must be a single line with no line breaks. Be very descriptive and v
   }
 });
 
-// Generate image with Google Gemini Imagen
+// Generate image with Gemini Flash image generation (free tier)
 router.post('/image', async (req: AuthRequest, res: Response) => {
   try {
     const { prompt } = req.body;
@@ -127,18 +127,15 @@ router.post('/image', async (req: AuthRequest, res: Response) => {
       return res.status(500).json({ error: 'Gemini API key not configured' });
     }
 
-    console.log('🎨 Generating image with Gemini Imagen...');
+    console.log('🎨 Generating image with Gemini Flash...');
 
     const response = await axios.post(
-      `https://generativelanguage.googleapis.com/v1beta/models/imagen-4.0-generate-001:predict?key=${process.env.GEMINI_API_KEY}`,
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp-image-generation:generateContent?key=${process.env.GEMINI_API_KEY}`,
       {
-        instances: [{ prompt }],
-        parameters: { 
-          sampleCount: 1,
-          aspectRatio: '16:9',
-          safetyFilterLevel: 'block_some',
-          personGeneration: 'allow_all'
-        }
+        contents: [{ parts: [{ text: `Generate an image: ${prompt}` }] }],
+        generationConfig: {
+          responseModalities: ['IMAGE', 'TEXT'],
+        },
       },
       {
         headers: {
@@ -148,14 +145,15 @@ router.post('/image', async (req: AuthRequest, res: Response) => {
       }
     );
 
-    console.log('📦 Gemini Imagen response received');
-    const base64Image = response.data?.predictions?.[0]?.bytesBase64Encoded;
-    if (!base64Image) {
+    console.log('📦 Gemini image response received');
+    const parts = response.data?.candidates?.[0]?.content?.parts || [];
+    const imagePart = parts.find((p: any) => p.inlineData);
+    if (!imagePart) {
       throw new Error('No image data in response');
     }
 
-    // Return base64 data URL for direct browser usage
-    const imageUrl = `data:image/png;base64,${base64Image}`;
+    const { mimeType, data: base64Image } = imagePart.inlineData;
+    const imageUrl = `data:${mimeType};base64,${base64Image}`;
     
     console.log('✅ Image generated successfully');
     res.json({ imageUrl });
