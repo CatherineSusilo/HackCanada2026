@@ -43,17 +43,9 @@ export const authMiddleware = (req: Request, res: Response, next: NextFunction) 
   });
 };
 
-// Extended Request interface with auth
-export interface AuthRequest extends Request {
-  auth?: {
-    payload: {
-      sub: string; // Auth0 user ID
-      [key: string]: any;
-    };
-    header: any;
-    token: string;
-  };
-}
+// Extended Request interface with auth — uses the library's own VerifyJwtResult
+// to avoid type incompatibility with Express route handler overloads
+export type AuthRequest = Request;
 
 // Middleware to extract user info from JWT
 export const extractUser = (req: AuthRequest, res: Response, next: NextFunction) => {

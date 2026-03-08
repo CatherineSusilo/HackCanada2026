@@ -275,7 +275,7 @@ router.get('/insights/:childId', async (req: AuthRequest, res) => {
     const recentStories = await prisma.storySession.findMany({
       where: { childId },
       orderBy: { startTime: 'desc' },
-      take: 10,
+      take: 30,
     });
 
     const recentSleep = await prisma.sleepSession.findMany({
@@ -284,7 +284,130 @@ router.get('/insights/:childId', async (req: AuthRequest, res) => {
       take: 10,
     });
 
-    // Calculate insights
+    // Load child preferences for themes
+    const preferences = await prisma.childPreferences.findUnique({
+      where: { childId },
+    });
+
+    // ── Compute avgEngagement from drift score improvement ──
+    const completedStories = recentStories.filter(s => s.completed);
+    let avgEngagement = '—';
+    if (completedStories.length > 0) {
+      const maxPossible = 100; // drift score is 0-100
+      const avgImprovement = completedStories
+        .reduce((sum, s) => sum + (s.finalDriftScore - s.initialDriftScore), 0) / completedStories.length;
+      const engagementPct = Math.min(100, Math.max(0, Math.round((avgImprovement / maxPossible) * 100)));
+      avgEngagement = `${engagementPct}%`;
+    }
+
+    // ── Compute favoriteThemes from preferences + parent prompts ──
+    const themeFreq: Record<string, number> = {};
+    // Count from preferences
+    if (preferences?.favoriteThemes) {
+      for (const t of preferences.favoriteThemes) {
+        const key = t.toLowerCase().trim();
+        if (key) themeFreq[key] = (themeFreq[key] || 0) + 3; // weight saved preferences higher
+      }
+    }
+    // Count common theme words from parent prompts
+    const themeKeywords = [
+      'space', 'ocean', 'forest', 'jungle', 'castle', 'dragon', 'pirate',
+      'fairy', 'dinosaur', 'robot', 'animal', 'magic', 'princess', 'prince',
+      'adventure', 'underwater', 'sky', 'mountain', 'garden', 'farm',
+      'superhero', 'train', 'car', 'moon', 'star', 'rainbow', 'snow',
+      'beach', 'island', 'desert', 'village', 'city', 'circus',
+    ];
+    for (const story of recentStories) {
+      const text = `${story.parentPrompt} ${story.storyTitle}`.toLowerCase();
+      for (const kw of themeKeywords) {
+        if (text.includes(kw)) {
+          themeFreq[kw] = (themeFreq[kw] || 0) + 1;
+        }
+      }
+    }
+    const favoriteThemes = Object.entries(themeFreq)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 3)
+      .map(([theme]) => theme);
+
+    // ── Compute favoriteCharacters from story content ──
+    const charFreq: Record<string, number> = {};
+    const characterPatterns = [
+      // Animals
+      { pattern: /\b(dragon|dragons)\b/gi, name: 'dragons' },
+      { pattern: /\b(owl|owls)\b/gi, name: 'owls' },
+      { pattern: /\b(bear|bears|teddy)\b/gi, name: 'bears' },
+      { pattern: /\b(bunny|rabbit|bunnies|rabbits)\b/gi, name: 'bunnies' },
+      { pattern: /\b(fox|foxes)\b/gi, name: 'foxes' },
+      { pattern: /\b(cat|cats|kitten|kittens)\b/gi, name: 'cats' },
+      { pattern: /\b(dog|dogs|puppy|puppies)\b/gi, name: 'dogs' },
+      { pattern: /\b(unicorn|unicorns)\b/gi, name: 'unicorns' },
+      { pattern: /\b(dinosaur|dinosaurs|dino|dinos)\b/gi, name: 'dinosaurs' },
+      { pattern: /\b(bird|birds)\b/gi, name: 'birds' },
+      { pattern: /\b(fish|fishes)\b/gi, name: 'fish' },
+      { pattern: /\b(wolf|wolves)\b/gi, name: 'wolves' },
+      { pattern: /\b(lion|lions)\b/gi, name: 'lions' },
+      { pattern: /\b(elephant|elephants)\b/gi, name: 'elephants' },
+      { pattern: /\b(monkey|monkeys)\b/gi, name: 'monkeys' },
+      // Fantasy/People
+      { pattern: /\b(princess|princesses)\b/gi, name: 'princesses' },
+      { pattern: /\b(prince|princes)\b/gi, name: 'princes' },
+      { pattern: /\b(fairy|fairies)\b/gi, name: 'fairies' },
+      { pattern: /\b(wizard|wizards)\b/gi, name: 'wizards' },
+      { pattern: /\b(pirate|pirates)\b/gi, name: 'pirates' },
+      { pattern: /\b(knight|knights)\b/gi, name: 'knights' },
+      { pattern: /\b(mermaid|mermaids)\b/gi, name: 'mermaids' },
+      { pattern: /\b(robot|robots)\b/gi, name: 'robots' },
+      { pattern: /\b(superhero|superheroes)\b/gi, name: 'superheroes' },
+      { pattern: /\b(astronaut|astronauts)\b/gi, name: 'astronauts' },
+    ];
+    for (const story of recentStories) {
+      const text = story.storyContent;
+      for (const { pattern, name } of characterPatterns) {
+        const matches = text.match(pattern);
+        if (matches) {
+          charFreq[name] = (charFreq[name] || 0) + matches.length;
+        }
+      }
+    }
+    const favoriteCharacters = Object.entries(charFreq)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 3)
+      .map(([char]) => char);
+
+    // ── Compute learningInsight from patterns ──
+    let learningInsight = '';
+    // Determine best tone
+    const toneEffectiveness: Record<string, number[]> = {};
+    completedStories.forEach(s => {
+      if (!toneEffectiveness[s.storytellingTone]) toneEffectiveness[s.storytellingTone] = [];
+      toneEffectiveness[s.storytellingTone].push(s.finalDriftScore - s.initialDriftScore);
+    });
+    let bestTone = '';
+    let bestToneAvg = 0;
+    Object.entries(toneEffectiveness).forEach(([tone, scores]) => {
+      const avg = scores.reduce((a, b) => a + b, 0) / scores.length;
+      if (avg > bestToneAvg) { bestToneAvg = avg; bestTone = tone; }
+    });
+    // Build insight sentence
+    const parts: string[] = [];
+    if (favoriteThemes.length > 0) {
+      parts.push(`loves ${favoriteThemes.slice(0, 2).join(' & ')} stories`);
+    }
+    if (bestTone) {
+      parts.push(`responds best to ${bestTone} storytelling`);
+    }
+    if (completedStories.length > 0) {
+      const avgDuration = Math.round(
+        completedStories.reduce((sum, s) => sum + (s.duration || 0), 0) / completedStories.length / 60
+      );
+      if (avgDuration > 0) {
+        parts.push(`usually drifts off in ~${avgDuration} min`);
+      }
+    }
+    learningInsight = parts.length > 0 ? parts.join(', ') : 'keep reading stories to unlock insights';
+
+    // ── Build insight cards (existing logic) ──
     const insights = [];
 
     // Insight 1: Story effectiveness
@@ -366,6 +489,10 @@ router.get('/insights/:childId', async (req: AuthRequest, res) => {
     res.json({
       childId,
       childName: child.name,
+      avgEngagement,
+      favoriteThemes,
+      favoriteCharacters,
+      learningInsight,
       insights,
       recentActivity: {
         storiesThisWeek: recentStories.filter(s => {

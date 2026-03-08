@@ -27,6 +27,7 @@ const updateStorySchema = z.object({
   completed: z.boolean().optional(),
   finalDriftScore: z.number().int().min(0).max(100).optional(),
   driftScoreHistory: z.array(z.number().int()).optional(),
+  vitalsHistory: z.any().optional(),
 });
 
 // Get all story sessions for a child
@@ -220,6 +221,7 @@ router.patch('/:storyId', async (req: AuthRequest, res) => {
         completed: body.completed,
         finalDriftScore: body.finalDriftScore,
         driftScoreHistory: body.driftScoreHistory,
+        vitalsHistory: body.vitalsHistory,
       },
     });
 

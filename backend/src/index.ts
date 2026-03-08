@@ -20,6 +20,7 @@ import sleepRoutes from './routes/sleep';
 import statisticsRoutes from './routes/statistics';
 import audioRoutes from './routes/audio';
 import generateRoutes from './routes/generate';
+import vitalsRoutes from './routes/vitals';
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -42,6 +43,7 @@ app.get('/health', (req, res) => {
 
 // Public routes (no auth required)
 app.use('/api/auth', authRoutes);
+app.use('/api/vitals', vitalsRoutes);
 
 // Protected routes (require Auth0 token)
 app.use('/api/users', authMiddleware, userRoutes);

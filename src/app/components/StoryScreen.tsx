@@ -32,6 +32,7 @@ export function StoryScreen({ profile, onComplete }: StoryScreenProps) {
   const [storySessionId, setStorySessionId] = useState<string | null>(null);
   const [showHint, setShowHint] = useState(true);
   const [isPanelOpen, setIsPanelOpen] = useState(false);
+  const [vitalsHistory, setVitalsHistory] = useState<Array<{timestamp: string, pulseRate?: number, breathingRate?: number}>>([]);
 
   const imagePromptsRef = useRef<any[]>((window as any).storyImagePrompts || []);
   const startTimeRef = useRef(Date.now());
@@ -60,6 +61,16 @@ export function StoryScreen({ profile, onComplete }: StoryScreenProps) {
     }
   };
 
+  const handleVitalsData = (data: any) => {
+    if (data.pulseRate || data.breathingRate) {
+      setVitalsHistory(prev => [...prev, {
+        timestamp: data.timestamp || new Date().toISOString(),
+        pulseRate: data.pulseRate,
+        breathingRate: data.breathingRate,
+      }]);
+    }
+  };
+
   useEffect(() => {
     const score = calculateDriftScore(profile.initialState, 0);
     setDriftScore(score);
@@ -79,7 +90,7 @@ export function StoryScreen({ profile, onComplete }: StoryScreenProps) {
         initialDriftScore: score,
         imagePrompts: imagePromptsRef.current,
         generatedImages: [],
-        modelUsed: 'gemini-2.5-flash',
+        modelUsed: 'gemini-2.0-flash',
       }).then(s => setStorySessionId(s.id)).catch(e => console.warn('Session save failed:', e));
     }
 
@@ -279,6 +290,7 @@ export function StoryScreen({ profile, onComplete }: StoryScreenProps) {
           completed: true,
           finalDriftScore: Math.round(driftScore),
           driftScoreHistory: driftHistory.map((s: number) => Math.round(s)),
+          vitalsHistory: vitalsHistory.length > 0 ? vitalsHistory : undefined,
         });
       } catch (e) {
         console.warn('Failed to save final session:', e);
@@ -313,7 +325,7 @@ export function StoryScreen({ profile, onComplete }: StoryScreenProps) {
 
               {/* Vitals Monitor */}
               <div className="pt-3 border-t border-white/10">
-                <VitalsMonitor onVitalsUpdate={handleVitalsUpdate} />
+                <VitalsMonitor onVitalsUpdate={handleVitalsUpdate} onVitalsData={handleVitalsData} />
               </div>
               <div>
                 <h2 className="text-white font-semibold">{storyTitle}</h2>

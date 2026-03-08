@@ -10,9 +10,10 @@ interface VitalsData {
 
 interface VitalsMonitorProps {
   onVitalsUpdate?: (sleepiness: number, isAsleep: boolean) => void;
+  onVitalsData?: (data: VitalsData) => void;
 }
 
-export default function VitalsMonitor({ onVitalsUpdate }: VitalsMonitorProps) {
+export default function VitalsMonitor({ onVitalsUpdate, onVitalsData }: VitalsMonitorProps) {
   const [vitals, setVitals] = useState<VitalsData | null>(null);
   const [isConnected, setIsConnected] = useState(false);
 
@@ -22,6 +23,11 @@ export default function VitalsMonitor({ onVitalsUpdate }: VitalsMonitorProps) {
       const data = event.detail as VitalsData;
       setVitals(data);
       setIsConnected(true);
+
+      // Send raw data to parent
+      if (onVitalsData) {
+        onVitalsData(data);
+      }
 
       // Calculate sleepiness and notify parent component
       if (onVitalsUpdate) {

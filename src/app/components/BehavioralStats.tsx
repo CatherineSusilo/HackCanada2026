@@ -1,11 +1,109 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
-import { ArrowLeft, TrendingUp, Smile } from 'lucide-react';
+import { ArrowLeft, TrendingUp, Smile, Heart, Wind } from 'lucide-react';
 import { useApi } from '../../lib/api';
-import type { Child } from '@prisma/client';
+import {
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+  Area,
+  AreaChart,
+} from 'recharts';
+
+interface VitalsPoint {
+  timestamp: string;
+  pulseRate?: number;
+  breathingRate?: number;
+}
+
+function VitalsLineChart({ 
+  data, 
+  dataKey, 
+  color, 
+  label, 
+  unit,
+}: { 
+  data: VitalsPoint[]; 
+  dataKey: 'pulseRate' | 'breathingRate'; 
+  color: string; 
+  label: string; 
+  unit: string;
+}) {
+  const values = data.map(d => d[dataKey]).filter((v): v is number => v != null && v > 0);
+  if (values.length < 2) return null;
+
+  const avg = Math.round(values.reduce((a, b) => a + b, 0) / values.length);
+
+  const chartData = data
+    .filter(d => d[dataKey] != null && d[dataKey]! > 0)
+    .map(d => ({
+      time: new Date(d.timestamp).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true }),
+      value: Math.round((d[dataKey] as number) * 10) / 10,
+    }));
+
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-2">
+        <span style={{ fontFamily: "'Patrick Hand', cursive", fontSize: '16px', color: 'rgba(30,20,15,0.7)' }}>
+          {label}
+        </span>
+        <span style={{ fontFamily: "'Indie Flower', cursive", fontSize: '22px', fontWeight: 'bold', color: 'rgba(20,15,10,0.85)' }}>
+          avg: {avg} {unit}
+        </span>
+      </div>
+      <ResponsiveContainer width="100%" height={180}>
+        <AreaChart data={chartData} margin={{ top: 5, right: 10, left: -10, bottom: 5 }}>
+          <defs>
+            <linearGradient id={`gradient-${dataKey}`} x1="0" y1="0" x2="0" y2="1">
+              <stop offset="5%" stopColor={color} stopOpacity={0.2} />
+              <stop offset="95%" stopColor={color} stopOpacity={0.02} />
+            </linearGradient>
+          </defs>
+          <CartesianGrid strokeDasharray="3 3" stroke="rgba(30,20,15,0.08)" />
+          <XAxis 
+            dataKey="time" 
+            tick={{ fontSize: 11, fill: 'rgba(30,20,15,0.5)', fontFamily: "'Patrick Hand', cursive" }}
+            tickLine={false}
+            axisLine={{ stroke: 'rgba(30,20,15,0.15)' }}
+            interval="preserveStartEnd"
+          />
+          <YAxis 
+            tick={{ fontSize: 11, fill: 'rgba(30,20,15,0.5)', fontFamily: "'Patrick Hand', cursive" }}
+            tickLine={false}
+            axisLine={{ stroke: 'rgba(30,20,15,0.15)' }}
+            domain={['dataMin - 2', 'dataMax + 2']}
+          />
+          <Tooltip
+            contentStyle={{
+              background: 'rgba(250, 245, 235, 0.95)',
+              border: '1px solid rgba(40, 30, 20, 0.2)',
+              borderRadius: '4px',
+              fontFamily: "'Patrick Hand', cursive",
+              fontSize: '14px',
+            }}
+            formatter={(value: number) => [`${value} ${unit}`, label]}
+          />
+          <Area
+            type="monotone"
+            dataKey="value"
+            stroke={color}
+            strokeWidth={2.5}
+            fill={`url(#gradient-${dataKey})`}
+            dot={false}
+            activeDot={{ r: 4, fill: color }}
+          />
+        </AreaChart>
+      </ResponsiveContainer>
+    </div>
+  );
+}
 
 interface BehavioralStatsProps {
-  onBack: () => void;
+  onBack?: () => void;
 }
 
 export function BehavioralStats({ onBack }: BehavioralStatsProps) {
@@ -13,6 +111,7 @@ export function BehavioralStats({ onBack }: BehavioralStatsProps) {
   const [children, setChildren] = useState<any[]>([]);
   const [selectedChild, setSelectedChild] = useState<any>(null);
   const [stats, setStats] = useState<any>(null);
+  const [vitalsData, setVitalsData] = useState<VitalsPoint[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -47,6 +146,35 @@ export function BehavioralStats({ onBack }: BehavioralStatsProps) {
         api.getInsights(childId),
       ]);
       setStats({ story: storyStats, sleep: sleepStats, insights });
+
+      // Load vitals data — try from recent story sessions first, then from vitals readings
+      try {
+        const stories = await api.getStories(childId, 10, 0);
+        const allVitals: VitalsPoint[] = [];
+        if (stories?.data) {
+          for (const story of stories.data) {
+            if (story.vitalsHistory && Array.isArray(story.vitalsHistory)) {
+              allVitals.push(...story.vitalsHistory);
+            }
+          }
+        }
+        // Also try fetching from the vitals endpoint
+        try {
+          const readings = await api.getChildVitals(childId, 48);
+          if (Array.isArray(readings) && readings.length > 0) {
+            allVitals.push(...readings.map((r: any) => ({
+              timestamp: r.timestamp,
+              pulseRate: r.pulseRate,
+              breathingRate: r.breathingRate,
+            })));
+          }
+        } catch {}
+        // Sort by timestamp and deduplicate
+        allVitals.sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
+        setVitalsData(allVitals);
+      } catch (e) {
+        console.warn('Failed to load vitals data:', e);
+      }
     } catch (error) {
       console.error('Failed to load stats:', error);
     }
@@ -149,7 +277,7 @@ export function BehavioralStats({ onBack }: BehavioralStatsProps) {
                     color: 'rgba(20, 15, 10, 0.9)' 
                   }}
                 >
-                  {stats.insights?.avgEngagement || '87%'}
+                  {stats.insights?.avgEngagement || '—'}
                 </p>
               </motion.div>
 
@@ -185,7 +313,7 @@ export function BehavioralStats({ onBack }: BehavioralStatsProps) {
                     lineHeight: '1.3',
                   }}
                 >
-                  {stats.insights?.favoriteThemes?.join(', ') || 'forest, ocean'}
+                  {stats.insights?.favoriteThemes?.length > 0 ? stats.insights.favoriteThemes.join(', ') : 'not enough stories yet'}
                 </p>
               </motion.div>
 
@@ -220,7 +348,7 @@ export function BehavioralStats({ onBack }: BehavioralStatsProps) {
                     lineHeight: '1.4',
                   }}
                 >
-                  {stats.insights?.learningInsight || 'loves imaginative worlds, responds well to adventure'}
+                  {stats.insights?.learningInsight || 'keep reading stories to unlock insights'}
                 </p>
               </motion.div>
 
@@ -256,122 +384,105 @@ export function BehavioralStats({ onBack }: BehavioralStatsProps) {
                     lineHeight: '1.3',
                   }}
                 >
-                  {stats.insights?.favoriteCharacters?.join(', ') || 'friendly dragons, wise owls'}
+                  {stats.insights?.favoriteCharacters?.length > 0 ? stats.insights.favoriteCharacters.join(', ') : 'not enough stories yet'}
                 </p>
               </motion.div>
             </div>
 
-            {/* Learning Timeline */}
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.2 }}
-              className="p-8 relative"
-              style={{
-                background: 'rgba(250, 245, 235, 0.8)',
-                border: '2px solid rgba(40, 30, 20, 0.25)',
-                boxShadow: '0 4px 10px rgba(0, 0, 0, 0.1)',
-              }}
-            >
-              <h3 
-                className="mb-8 text-center"
-                style={{ 
-                  fontFamily: "'Indie Flower', cursive",
-                  fontSize: '32px',
-                  fontWeight: 'bold',
-                  color: 'rgba(20, 15, 10, 0.85)' 
-                }}
-              >
-                {selectedChild.name}'s tale map
-              </h3>
-              <p 
-                className="text-center mb-8"
-                style={{ 
-                  fontFamily: "'Patrick Hand', cursive",
-                  fontSize: '18px',
-                  color: 'rgba(30, 20, 15, 0.65)' 
-                }}
-              >
-                learning journey through stories
-              </p>
-
-              {/* Path with milestones */}
-              <div className="relative max-w-3xl mx-auto">
-                {/* Curved path SVG */}
-                <svg className="absolute inset-0 w-full h-full pointer-events-none" style={{ zIndex: 0 }}>
-                  <path
-                    d="M 80 40 Q 200 60, 160 140 T 240 240 Q 180 300, 280 360 T 200 480"
-                    stroke="rgba(80, 60, 40, 0.25)"
-                    strokeWidth="3"
-                    fill="none"
-                    strokeDasharray="10,5"
-                  />
-                </svg>
-
-                {/* Learning Milestones */}
-                <div className="relative space-y-12 py-6">
-                  {[
-                    { icon: '🌱', label: 'first stories', desc: 'discovering narrative structure' },
-                    { icon: '🌿', label: 'building vocabulary', desc: 'learning new words through tales' },
-                    { icon: '🌳', label: 'emotional awareness', desc: 'understanding feelings & empathy' },
-                    { icon: '🌟', label: 'imagination growth', desc: 'creating mental imagery' },
-                    { icon: '✨', label: 'pattern recognition', desc: 'predicting story outcomes' },
-                  ].map((milestone, index) => (
-                    <motion.div
-                      key={index}
-                      initial={{ opacity: 0, x: index % 2 === 0 ? -30 : 30 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      transition={{ delay: 0.3 + index * 0.1 }}
-                      className={`flex items-center gap-6 ${index % 2 === 0 ? 'ml-0 mr-auto' : 'ml-auto mr-0'}`}
-                      style={{ maxWidth: '400px' }}
+            {/* Vitals Charts — Heart Rate & Breathing */}
+            {vitalsData.length >= 2 && (
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 mb-8">
+                {/* Heart Rate Chart */}
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.15 }}
+                  className="p-6"
+                  style={{
+                    background: 'rgba(250, 245, 235, 0.8)',
+                    border: '2px solid rgba(40, 30, 20, 0.25)',
+                    boxShadow: '0 4px 10px rgba(0, 0, 0, 0.1)',
+                  }}
+                >
+                  <div className="flex items-center gap-2 mb-4">
+                    <Heart className="w-5 h-5" style={{ color: 'rgba(180, 60, 60, 0.8)' }} />
+                    <h3
+                      style={{
+                        fontFamily: "'Indie Flower', cursive",
+                        fontSize: '22px',
+                        fontWeight: 'bold',
+                        color: 'rgba(20, 15, 10, 0.85)',
+                      }}
                     >
-                      {/* Milestone Icon */}
-                      <div 
-                        className="flex-shrink-0 w-16 h-16 rounded-full flex items-center justify-center text-2xl relative z-10"
-                        style={{
-                          background: 'rgba(210, 180, 140, 0.6)',
-                          border: '3px solid rgba(40, 30, 20, 0.35)',
-                          boxShadow: '0 3px 8px rgba(0, 0, 0, 0.12)',
-                        }}
-                      >
-                        {milestone.icon}
-                      </div>
+                      heart rate
+                    </h3>
+                  </div>
+                  <VitalsLineChart
+                    data={vitalsData}
+                    dataKey="pulseRate"
+                    color="#c0392b"
+                    label="during bedtime stories"
+                    unit="bpm"
+                  />
+                </motion.div>
 
-                      {/* Milestone Info */}
-                      <div 
-                        className="flex-1 p-4"
-                        style={{
-                          background: 'rgba(255, 250, 240, 0.7)',
-                          border: '2px solid rgba(40, 30, 20, 0.2)',
-                          boxShadow: '0 2px 6px rgba(0, 0, 0, 0.08)',
-                        }}
-                      >
-                        <p 
-                          style={{ 
-                            fontFamily: "'Indie Flower', cursive",
-                            fontSize: '20px',
-                            fontWeight: 'bold',
-                            color: 'rgba(20, 15, 10, 0.85)',
-                            marginBottom: '4px',
-                          }}
-                        >
-                          {milestone.label}
-                        </p>
-                        <p 
-                          style={{ 
-                            fontFamily: "'Patrick Hand', cursive",
-                            fontSize: '15px',
-                            color: 'rgba(30, 20, 15, 0.7)' 
-                          }}
-                        >
-                          {milestone.desc}
-                        </p>
-                      </div>
-                    </motion.div>
-                  ))}
-                </div>
+                {/* Breathing Rate Chart */}
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.2 }}
+                  className="p-6"
+                  style={{
+                    background: 'rgba(250, 245, 235, 0.8)',
+                    border: '2px solid rgba(40, 30, 20, 0.25)',
+                    boxShadow: '0 4px 10px rgba(0, 0, 0, 0.1)',
+                  }}
+                >
+                  <div className="flex items-center gap-2 mb-4">
+                    <Wind className="w-5 h-5" style={{ color: 'rgba(40, 120, 140, 0.8)' }} />
+                    <h3
+                      style={{
+                        fontFamily: "'Indie Flower', cursive",
+                        fontSize: '22px',
+                        fontWeight: 'bold',
+                        color: 'rgba(20, 15, 10, 0.85)',
+                      }}
+                    >
+                      breathing rate
+                    </h3>
+                  </div>
+                  <VitalsLineChart
+                    data={vitalsData}
+                    dataKey="breathingRate"
+                    color="#2980b9"
+                    label="during bedtime stories"
+                    unit="breaths/min"
+                  />
+                </motion.div>
               </div>
-            </motion.div>
+            )}
+
+            {vitalsData.length === 0 && (
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.15 }}
+                className="p-6 mb-8 text-center"
+                style={{
+                  background: 'rgba(250, 245, 235, 0.6)',
+                  border: '2px dashed rgba(40, 30, 20, 0.2)',
+                }}
+              >
+                <div className="flex items-center justify-center gap-3 mb-2">
+                  <Heart className="w-5 h-5" style={{ color: 'rgba(30, 20, 15, 0.4)' }} />
+                  <Wind className="w-5 h-5" style={{ color: 'rgba(30, 20, 15, 0.4)' }} />
+                </div>
+                <p style={{ fontFamily: "'Patrick Hand', cursive", fontSize: '16px', color: 'rgba(30, 20, 15, 0.5)' }}>
+                  vitals data will appear here after bedtime stories with the companion phone app
+                </p>
+              </motion.div>
+            )}
+
           </>
         )}
       </div>

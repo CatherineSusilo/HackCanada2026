@@ -42,7 +42,7 @@ router.post('/story', async (req: AuthRequest, res: Response) => {
 
     // Initialize Gemini AI
     const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
-    const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
+    const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' });
 
     const storyPrompt = `You are a bedtime story narrator. Create a calming, soothing bedtime story told in third person.
 
@@ -103,7 +103,7 @@ Each prompt must be a single line with no line breaks. Be very descriptive and v
       console.warn('⚠️ Image prompt generation/parse failed:', parseErr.message);
     }
 
-    res.json({ story, imagePrompts, modelUsed: 'gemini-2.5-flash' });
+    res.json({ story, imagePrompts, modelUsed: 'gemini-2.0-flash' });
 
   } catch (error: any) {
     console.error('❌ Story generation error:', error.response?.data || error.message);

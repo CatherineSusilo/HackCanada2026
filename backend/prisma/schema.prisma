@@ -75,6 +75,7 @@ model StorySession {
   
   imagePrompts      Json?
   generatedImages   String[]
+  vitalsHistory     Json?
 
   modelUsed         String?
   
@@ -111,4 +112,19 @@ model SleepSession {
 
   @@index([childId])
   @@index([bedtime])
+}
+
+model VitalsReading {
+  id             String   @id @default(auto()) @map("_id") @db.ObjectId
+  childId        String?  @db.ObjectId
+  storySessionId String?  @db.ObjectId
+  pulseRate      Float?
+  breathingRate  Float?
+  signalQuality  Float?
+  timestamp      DateTime @default(now())
+  createdAt      DateTime @default(now())
+
+  @@index([childId])
+  @@index([storySessionId])
+  @@index([timestamp])
 }

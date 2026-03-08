@@ -8,6 +8,14 @@ class SmartSpectraManager: ObservableObject {
 
     private var cancellables = Set<AnyCancellable>()
     let metricsPublisher = PassthroughSubject<VitalsMetrics, Never>()
+    private var postTimer: Timer?
+
+    // Change to your Mac's local IP for device testing
+    #if DEBUG
+    private let backendURL = "http://10.200.9.45:3001"
+    #else
+    private let backendURL = "http://localhost:3001"
+    #endif
 
     init() {
         setupObservers()
@@ -36,13 +44,45 @@ class SmartSpectraManager: ObservableObject {
     func startMonitoring() {
         DispatchQueue.main.async {
             self.isMonitoring = true
+            self.postTimer = Timer.scheduledTimer(withTimeInterval: 5.0, repeats: true) { [weak self] _ in
+                self?.postCurrentVitals()
+            }
         }
     }
 
     func stopMonitoring() {
         DispatchQueue.main.async {
             self.isMonitoring = false
+            self.postTimer?.invalidate()
+            self.postTimer = nil
         }
+    }
+
+    private func postCurrentVitals() {
+        guard let metrics = currentMetrics,
+              metrics.pulseRate != nil || metrics.breathingRate != nil else { return }
+
+        guard let url = URL(string: "\(backendURL)/api/vitals/record") else { return }
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+
+        var payload: [String: Any] = [
+            "timestamp": ISO8601DateFormatter().string(from: metrics.timestamp)
+        ]
+        if let pulse = metrics.pulseRate { payload["pulseRate"] = pulse }
+        if let breathing = metrics.breathingRate { payload["breathingRate"] = breathing }
+        if let quality = metrics.signalQuality { payload["signalQuality"] = quality }
+
+        guard let jsonData = try? JSONSerialization.data(withJSONObject: payload) else { return }
+        request.httpBody = jsonData
+
+        URLSession.shared.dataTask(with: request) { _, _, error in
+            if let error = error {
+                print("Failed to post vitals: \(error)")
+            }
+        }.resume()
     }
 
     private func handlePulseUpdate(_ notification: Notification) {

@@ -69,7 +69,7 @@ Generate the story now:`;
     console.log('Attempting to generate story...');
 
     // Use the stable flash model
-    const modelName = 'gemini-2.5-flash';
+    const modelName = 'gemini-2.0-flash';
     
     try {
       console.log(`Using model: ${modelName}`);
@@ -102,7 +102,7 @@ Generate the story now:`;
 
 // Generate image description prompts for each paragraph
 async function generateImagePrompts(paragraphs, profile) {
-  const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
+  const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' });
   
   const imagePrompts = [];
   

@@ -103,6 +103,13 @@ export const useApi = () => {
       fetchWithAuth(`/statistics/stories/${childId}?days=${days}`),
     getInsights: (childId: string) => fetchWithAuth(`/statistics/insights/${childId}`),
 
+    // Vitals
+    getLatestVitals: (hours = 24) => fetchWithAuth(`/vitals/latest?hours=${hours}`),
+    getChildVitals: (childId: string, hours = 24) => 
+      fetchWithAuth(`/vitals/child/${childId}?hours=${hours}`),
+    getSessionVitals: (storySessionId: string) => 
+      fetchWithAuth(`/vitals/session/${storySessionId}`),
+
     // Audio
     generateAudio: async (text: string, voiceId?: string) => {
       const token = await getAccessTokenSilently({
