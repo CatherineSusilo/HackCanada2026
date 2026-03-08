@@ -92,6 +92,7 @@ export function StoryScreen({ profile, onComplete }: StoryScreenProps) {
 
   const generateImageForIndex = async (paraIdx: number) => {
     const prompts = imagePromptsRef.current;
+    console.log(`🖼️ generateImageForIndex(${paraIdx}): ${prompts.length} prompts available`);
     if (prompts.length === 0 || imageGenInProgressRef.current.has(paraIdx)) return;
 
     const promptIdx = Math.min(
@@ -102,7 +103,9 @@ export function StoryScreen({ profile, onComplete }: StoryScreenProps) {
 
     imageGenInProgressRef.current.add(paraIdx);
     try {
+      console.log(`🖼️ Requesting image for prompt ${promptIdx}:`, prompts[promptIdx]?.prompt?.substring(0, 80));
       const data = await api.generateImage(prompts[promptIdx].prompt);
+      console.log(`🖼️ Image response:`, data?.imageUrl ? 'got URL' : 'no URL', data);
       if (data?.imageUrl) {
         generatedImagesRef.current.set(promptIdx, data.imageUrl);
         const img = new Image();
@@ -112,7 +115,7 @@ export function StoryScreen({ profile, onComplete }: StoryScreenProps) {
         }
       }
     } catch (e) {
-      console.warn('Image gen failed for paragraph', paraIdx);
+      console.error('🖼️ Image gen failed for paragraph', paraIdx, e);
     }
     imageGenInProgressRef.current.delete(paraIdx);
   };
@@ -153,13 +156,7 @@ export function StoryScreen({ profile, onComplete }: StoryScreenProps) {
 
       const voiceId = voiceMap[profile.storytellingTone] || localStorage.getItem('ai_selected_voice') || 'JBFqnCBsd6RMkjVDRZzb';
 
-      const response = await fetch('http://localhost:3001/api/generate-audio', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ story: text, voiceId }),
-      });
-
-      const blob = await response.blob();
+      const blob = await api.generateAudio(text, voiceId);
       const url = URL.createObjectURL(blob);
       const audio = new Audio(url);
 

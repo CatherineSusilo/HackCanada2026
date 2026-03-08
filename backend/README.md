@@ -50,8 +50,9 @@ cp .env.example .env
 - `AUTH0_CLIENT_SECRET` - Auth0 application client secret
 
 **Optional:**
-- `GEMINI_API_KEY` - Google Gemini API key
-- `FAL_API_KEY` - Fal.ai API key
+- `GEMINI_API_KEY` - Google Gemini API key (used for story generation and Imagen image generation)
+- `FAL_API_KEY` - ~~Fal.ai API key~~ (deprecated - now using Gemini Imagen for images)
+- `ELEVENLABS_API_KEY` - ElevenLabs API key for voice synthesis
 
 ### 4. Set Up Database
 

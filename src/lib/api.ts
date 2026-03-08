@@ -122,7 +122,9 @@ export const useApi = () => {
       });
 
       if (!response.ok) {
-        throw new Error('Failed to generate audio');
+        const errorBody = await response.text();
+        console.error('Audio API error:', response.status, errorBody);
+        throw new Error(`Failed to generate audio: ${response.status} ${errorBody}`);
       }
 
       return response.blob();
