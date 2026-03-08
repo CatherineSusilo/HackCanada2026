@@ -7,6 +7,14 @@ import { GoogleGenerativeAI } from '@google/generative-ai';
 
 const router = Router();
 
+async function getUserId(req: AuthRequest): Promise<string> {
+  const auth0Id = req.auth?.payload?.sub;
+  if (!auth0Id) throw new Error('Unauthorized');
+  const user = await prisma.user.findUnique({ where: { auth0Id } });
+  if (!user) throw new Error('User not found');
+  return user.id;
+}
+
 const createCharacterSchema = z.object({
   name: z.string().min(1),
   description: z.string().min(1),
@@ -26,7 +34,7 @@ const updateCharacterSchema = z.object({
 // GET / — list all user characters with story stats
 router.get('/', async (req: AuthRequest, res: Response) => {
   try {
-    const userId = req.userId!;
+    const userId = await getUserId(req);
     const characters = await prisma.character.findMany({
       where: { userId },
       orderBy: { createdAt: 'desc' },
@@ -40,7 +48,7 @@ router.get('/', async (req: AuthRequest, res: Response) => {
 // GET /:id — single character with detailed stats
 router.get('/:id', async (req: AuthRequest, res: Response) => {
   try {
-    const userId = req.userId!;
+    const userId = await getUserId(req);
     const character = await prisma.character.findFirst({
       where: { id: req.params.id, userId },
     });
@@ -65,7 +73,7 @@ router.get('/:id', async (req: AuthRequest, res: Response) => {
 // POST / — create character
 router.post('/', async (req: AuthRequest, res: Response) => {
   try {
-    const userId = req.userId!;
+    const userId = await getUserId(req);
     const data = createCharacterSchema.parse(req.body);
     const character = await prisma.character.create({
       data: {
@@ -85,7 +93,7 @@ router.post('/', async (req: AuthRequest, res: Response) => {
 // PATCH /:id — update character
 router.patch('/:id', async (req: AuthRequest, res: Response) => {
   try {
-    const userId = req.userId!;
+    const userId = await getUserId(req);
     const data = updateCharacterSchema.parse(req.body);
     const existing = await prisma.character.findFirst({ where: { id: req.params.id, userId } });
     if (!existing) return res.status(404).json({ error: 'Character not found' });
@@ -103,7 +111,7 @@ router.patch('/:id', async (req: AuthRequest, res: Response) => {
 // DELETE /:id
 router.delete('/:id', async (req: AuthRequest, res: Response) => {
   try {
-    const userId = req.userId!;
+    const userId = await getUserId(req);
     const existing = await prisma.character.findFirst({ where: { id: req.params.id, userId } });
     if (!existing) return res.status(404).json({ error: 'Character not found' });
 
@@ -117,7 +125,7 @@ router.delete('/:id', async (req: AuthRequest, res: Response) => {
 // POST /:id/match-voice — use Gemini to pick the best ElevenLabs voice for a character
 router.post('/:id/match-voice', async (req: AuthRequest, res: Response) => {
   try {
-    const userId = req.userId!;
+    const userId = await getUserId(req);
     const character = await prisma.character.findFirst({ where: { id: req.params.id, userId } });
     if (!character) return res.status(404).json({ error: 'Character not found' });
 

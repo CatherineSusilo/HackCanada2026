@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
-import { ArrowLeft, TrendingUp, Smile, Heart, Wind } from 'lucide-react';
+import { ArrowLeft, TrendingUp, Smile, Heart, Wind, Download } from 'lucide-react';
 import { useApi } from '../../lib/api';
+import * as XLSX from 'xlsx';
 import {
   LineChart,
   Line,
@@ -113,6 +114,21 @@ export function BehavioralStats({ onBack }: BehavioralStatsProps) {
   const [stats, setStats] = useState<any>(null);
   const [vitalsData, setVitalsData] = useState<VitalsPoint[]>([]);
   const [loading, setLoading] = useState(true);
+
+  const downloadVitalsExcel = () => {
+    if (vitalsData.length === 0) return;
+    const rows = vitalsData.map(d => ({
+      'Timestamp': new Date(d.timestamp).toLocaleString(),
+      'Heart Rate (bpm)': d.pulseRate ?? '',
+      'Breathing Rate (breaths/min)': d.breathingRate ?? '',
+    }));
+    const ws = XLSX.utils.json_to_sheet(rows);
+    ws['!cols'] = [{ wch: 22 }, { wch: 18 }, { wch: 28 }];
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Vitals Data');
+    const childName = selectedChild?.name?.replace(/[^a-zA-Z0-9]/g, '_') || 'child';
+    XLSX.writeFile(wb, `${childName}_vitals_${new Date().toISOString().slice(0, 10)}.xlsx`);
+  };
 
   useEffect(() => {
     loadChildren();
@@ -391,6 +407,23 @@ export function BehavioralStats({ onBack }: BehavioralStatsProps) {
 
             {/* Vitals Charts — Heart Rate & Breathing */}
             {vitalsData.length >= 2 && (
+              <>
+              <div className="flex justify-end mb-3">
+                <button
+                  onClick={downloadVitalsExcel}
+                  className="flex items-center gap-2 px-4 py-2 transition-all cursor-pointer hover:opacity-80"
+                  style={{
+                    fontFamily: "'Patrick Hand', cursive",
+                    fontSize: '16px',
+                    color: 'rgba(20, 15, 10, 0.8)',
+                    background: 'rgba(210, 180, 140, 0.4)',
+                    border: '2px solid rgba(40, 30, 20, 0.25)',
+                  }}
+                >
+                  <Download className="w-4 h-4" />
+                  download vitals data
+                </button>
+              </div>
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 mb-8">
                 {/* Heart Rate Chart */}
                 <motion.div
@@ -460,6 +493,7 @@ export function BehavioralStats({ onBack }: BehavioralStatsProps) {
                   />
                 </motion.div>
               </div>
+              </>
             )}
 
             {vitalsData.length === 0 && (

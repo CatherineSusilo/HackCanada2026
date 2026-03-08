@@ -411,10 +411,10 @@ router.get('/insights/:childId', async (req: AuthRequest, res) => {
     const insights = [];
 
     // Insight 1: Story effectiveness
-    const completedStories = recentStories.filter(s => s.completed);
-    if (completedStories.length >= 3) {
-      const avgImprovement = completedStories
-        .reduce((sum, s) => sum + (s.finalDriftScore - s.initialDriftScore), 0) / completedStories.length;
+    const completedForInsights = recentStories.filter(s => s.completed);
+    if (completedForInsights.length >= 3) {
+      const avgImprovement = completedForInsights
+        .reduce((sum, s) => sum + (s.finalDriftScore - s.initialDriftScore), 0) / completedForInsights.length;
       
       if (avgImprovement > 60) {
         insights.push({
