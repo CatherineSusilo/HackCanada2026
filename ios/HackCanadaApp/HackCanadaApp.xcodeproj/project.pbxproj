@@ -1,0 +1,622 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		CF783CC22F5CD78F001DBFE5 /* SmartSpectraSwiftSDK in Frameworks */ = {isa = PBXBuildFile; productRef = CF783CC12F5CD78F001DBFE5 /* SmartSpectraSwiftSDK */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		CFC352A72F5C9C7A007499D8 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = CFC3528E2F5C9C75007499D8 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = CFC352952F5C9C75007499D8;
+			remoteInfo = HackCanadaApp;
+		};
+		CFC352B12F5C9C7A007499D8 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = CFC3528E2F5C9C75007499D8 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = CFC352952F5C9C75007499D8;
+			remoteInfo = HackCanadaApp;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXFileReference section */
+		CFC352962F5C9C75007499D8 /* HackCanadaApp.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = HackCanadaApp.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		CFC352A62F5C9C7A007499D8 /* HackCanadaAppTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = HackCanadaAppTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		CFC352B02F5C9C7A007499D8 /* HackCanadaAppUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = HackCanadaAppUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+/* End PBXFileReference section */
+
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		CF0710512F5CF51E005B5821 /* Exceptions for "HackCanadaApp" folder in "HackCanadaApp" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = CFC352952F5C9C75007499D8 /* HackCanadaApp */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
+
+/* Begin PBXFileSystemSynchronizedRootGroup section */
+		CFC352982F5C9C75007499D8 /* HackCanadaApp */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				CF0710512F5CF51E005B5821 /* Exceptions for "HackCanadaApp" folder in "HackCanadaApp" target */,
+			);
+			path = HackCanadaApp;
+			sourceTree = "<group>";
+		};
+		CFC352A92F5C9C7A007499D8 /* HackCanadaAppTests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = HackCanadaAppTests;
+			sourceTree = "<group>";
+		};
+		CFC352B32F5C9C7A007499D8 /* HackCanadaAppUITests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = HackCanadaAppUITests;
+			sourceTree = "<group>";
+		};
+/* End PBXFileSystemSynchronizedRootGroup section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		CFC352932F5C9C75007499D8 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				CF783CC22F5CD78F001DBFE5 /* SmartSpectraSwiftSDK in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		CFC352A32F5C9C7A007499D8 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		CFC352AD2F5C9C7A007499D8 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		CF783CC02F5CD78F001DBFE5 /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
+		CFC3528D2F5C9C75007499D8 = {
+			isa = PBXGroup;
+			children = (
+				CFC352982F5C9C75007499D8 /* HackCanadaApp */,
+				CFC352A92F5C9C7A007499D8 /* HackCanadaAppTests */,
+				CFC352B32F5C9C7A007499D8 /* HackCanadaAppUITests */,
+				CF783CC02F5CD78F001DBFE5 /* Frameworks */,
+				CFC352972F5C9C75007499D8 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		CFC352972F5C9C75007499D8 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				CFC352962F5C9C75007499D8 /* HackCanadaApp.app */,
+				CFC352A62F5C9C7A007499D8 /* HackCanadaAppTests.xctest */,
+				CFC352B02F5C9C7A007499D8 /* HackCanadaAppUITests.xctest */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		CFC352952F5C9C75007499D8 /* HackCanadaApp */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = CFC352BA2F5C9C7A007499D8 /* Build configuration list for PBXNativeTarget "HackCanadaApp" */;
+			buildPhases = (
+				CFC352922F5C9C75007499D8 /* Sources */,
+				CFC352932F5C9C75007499D8 /* Frameworks */,
+				CFC352942F5C9C75007499D8 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				CFC352982F5C9C75007499D8 /* HackCanadaApp */,
+			);
+			name = HackCanadaApp;
+			packageProductDependencies = (
+				CF783CC12F5CD78F001DBFE5 /* SmartSpectraSwiftSDK */,
+			);
+			productName = HackCanadaApp;
+			productReference = CFC352962F5C9C75007499D8 /* HackCanadaApp.app */;
+			productType = "com.apple.product-type.application";
+		};
+		CFC352A52F5C9C7A007499D8 /* HackCanadaAppTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = CFC352BD2F5C9C7A007499D8 /* Build configuration list for PBXNativeTarget "HackCanadaAppTests" */;
+			buildPhases = (
+				CFC352A22F5C9C7A007499D8 /* Sources */,
+				CFC352A32F5C9C7A007499D8 /* Frameworks */,
+				CFC352A42F5C9C7A007499D8 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				CFC352A82F5C9C7A007499D8 /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				CFC352A92F5C9C7A007499D8 /* HackCanadaAppTests */,
+			);
+			name = HackCanadaAppTests;
+			packageProductDependencies = (
+			);
+			productName = HackCanadaAppTests;
+			productReference = CFC352A62F5C9C7A007499D8 /* HackCanadaAppTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
+		CFC352AF2F5C9C7A007499D8 /* HackCanadaAppUITests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = CFC352C02F5C9C7A007499D8 /* Build configuration list for PBXNativeTarget "HackCanadaAppUITests" */;
+			buildPhases = (
+				CFC352AC2F5C9C7A007499D8 /* Sources */,
+				CFC352AD2F5C9C7A007499D8 /* Frameworks */,
+				CFC352AE2F5C9C7A007499D8 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				CFC352B22F5C9C7A007499D8 /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				CFC352B32F5C9C7A007499D8 /* HackCanadaAppUITests */,
+			);
+			name = HackCanadaAppUITests;
+			packageProductDependencies = (
+			);
+			productName = HackCanadaAppUITests;
+			productReference = CFC352B02F5C9C7A007499D8 /* HackCanadaAppUITests.xctest */;
+			productType = "com.apple.product-type.bundle.ui-testing";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		CFC3528E2F5C9C75007499D8 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastSwiftUpdateCheck = 1620;
+				LastUpgradeCheck = 1620;
+				TargetAttributes = {
+					CFC352952F5C9C75007499D8 = {
+						CreatedOnToolsVersion = 16.2;
+					};
+					CFC352A52F5C9C7A007499D8 = {
+						CreatedOnToolsVersion = 16.2;
+						TestTargetID = CFC352952F5C9C75007499D8;
+					};
+					CFC352AF2F5C9C7A007499D8 = {
+						CreatedOnToolsVersion = 16.2;
+						TestTargetID = CFC352952F5C9C75007499D8;
+					};
+				};
+			};
+			buildConfigurationList = CFC352912F5C9C75007499D8 /* Build configuration list for PBXProject "HackCanadaApp" */;
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+			);
+			mainGroup = CFC3528D2F5C9C75007499D8;
+			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				CFC352C92F5CAA5B007499D8 /* XCRemoteSwiftPackageReference "SmartSpectra" */,
+			);
+			preferredProjectObjectVersion = 77;
+			productRefGroup = CFC352972F5C9C75007499D8 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				CFC352952F5C9C75007499D8 /* HackCanadaApp */,
+				CFC352A52F5C9C7A007499D8 /* HackCanadaAppTests */,
+				CFC352AF2F5C9C7A007499D8 /* HackCanadaAppUITests */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		CFC352942F5C9C75007499D8 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		CFC352A42F5C9C7A007499D8 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		CFC352AE2F5C9C7A007499D8 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		CFC352922F5C9C75007499D8 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		CFC352A22F5C9C7A007499D8 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		CFC352AC2F5C9C7A007499D8 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		CFC352A82F5C9C7A007499D8 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = CFC352952F5C9C75007499D8 /* HackCanadaApp */;
+			targetProxy = CFC352A72F5C9C7A007499D8 /* PBXContainerItemProxy */;
+		};
+		CFC352B22F5C9C7A007499D8 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = CFC352952F5C9C75007499D8 /* HackCanadaApp */;
+			targetProxy = CFC352B12F5C9C7A007499D8 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
+/* Begin XCBuildConfiguration section */
+		CFC352B82F5C9C7A007499D8 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.2;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = iphoneos;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+			};
+			name = Debug;
+		};
+		CFC352B92F5C9C7A007499D8 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.2;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				SDKROOT = iphoneos;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
+		CFC352BB2F5C9C7A007499D8 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_ASSET_PATHS = "\"HackCanadaApp/Preview Content\"";
+				DEVELOPMENT_TEAM = RKNK886G9S;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = HackCanadaApp/Info.plist;
+				INFOPLIST_KEY_NSCameraUsageDescription = "Camera is needed for vitals monitoring.";
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.Test.HackCanadaApp;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SUPPORTS_MACCATALYST = NO;
+				SUPPORTS_XR_DESIGNED_FOR_IPHONE_IPAD = NO;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Debug;
+		};
+		CFC352BC2F5C9C7A007499D8 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_ASSET_PATHS = "\"HackCanadaApp/Preview Content\"";
+				DEVELOPMENT_TEAM = RKNK886G9S;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = HackCanadaApp/Info.plist;
+				INFOPLIST_KEY_NSCameraUsageDescription = "Camera is needed for vitals monitoring.";
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.Test.HackCanadaApp;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SUPPORTS_MACCATALYST = NO;
+				SUPPORTS_XR_DESIGNED_FOR_IPHONE_IPAD = NO;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Release;
+		};
+		CFC352BE2F5C9C7A007499D8 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = RKNK886G9S;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.2;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.Test.HackCanadaAppTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/HackCanadaApp.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/HackCanadaApp";
+			};
+			name = Debug;
+		};
+		CFC352BF2F5C9C7A007499D8 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = RKNK886G9S;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.2;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.Test.HackCanadaAppTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/HackCanadaApp.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/HackCanadaApp";
+			};
+			name = Release;
+		};
+		CFC352C12F5C9C7A007499D8 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = RKNK886G9S;
+				GENERATE_INFOPLIST_FILE = YES;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.Test.HackCanadaAppUITests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_TARGET_NAME = HackCanadaApp;
+			};
+			name = Debug;
+		};
+		CFC352C22F5C9C7A007499D8 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = RKNK886G9S;
+				GENERATE_INFOPLIST_FILE = YES;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.Test.HackCanadaAppUITests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_TARGET_NAME = HackCanadaApp;
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		CFC352912F5C9C75007499D8 /* Build configuration list for PBXProject "HackCanadaApp" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				CFC352B82F5C9C7A007499D8 /* Debug */,
+				CFC352B92F5C9C7A007499D8 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		CFC352BA2F5C9C7A007499D8 /* Build configuration list for PBXNativeTarget "HackCanadaApp" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				CFC352BB2F5C9C7A007499D8 /* Debug */,
+				CFC352BC2F5C9C7A007499D8 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		CFC352BD2F5C9C7A007499D8 /* Build configuration list for PBXNativeTarget "HackCanadaAppTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				CFC352BE2F5C9C7A007499D8 /* Debug */,
+				CFC352BF2F5C9C7A007499D8 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		CFC352C02F5C9C7A007499D8 /* Build configuration list for PBXNativeTarget "HackCanadaAppUITests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				CFC352C12F5C9C7A007499D8 /* Debug */,
+				CFC352C22F5C9C7A007499D8 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		CFC352C92F5CAA5B007499D8 /* XCRemoteSwiftPackageReference "SmartSpectra" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/Presage-Security/SmartSpectra";
+			requirement = {
+				branch = main;
+				kind = branch;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		CF783CC12F5CD78F001DBFE5 /* SmartSpectraSwiftSDK */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = CFC352C92F5CAA5B007499D8 /* XCRemoteSwiftPackageReference "SmartSpectra" */;
+			productName = SmartSpectraSwiftSDK;
+		};
+/* End XCSwiftPackageProductDependency section */
+	};
+	rootObject = CFC3528E2F5C9C75007499D8 /* Project object */;
+}

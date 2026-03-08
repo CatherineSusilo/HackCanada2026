@@ -1,7 +1,7 @@
 import express from 'express';
 import cors from 'cors';
 import { GoogleGenerativeAI } from '@google/generative-ai';
-import { fal } from '@fal-ai/client';
+import axios from 'axios';
 import dotenv from 'dotenv';
 
 dotenv.config();
@@ -14,7 +14,7 @@ app.use(express.json());
 
 const genAI = new GoogleGenerativeAI(process.env.VITE_GEMINI_API_KEY);
 
-// fal.ai will use FAL_KEY from environment variables automatically
+// Google Gemini Imagen for image generation
 
 app.post('/api/generate-story', async (req, res) => {
   try {
@@ -38,7 +38,7 @@ app.post('/api/generate-story', async (req, res) => {
       'almost-there': 'The child is already very sleepy. Use extremely gentle, peaceful language from the start.',
     };
 
-    const prompt = `You are a master bedtime storyteller. Generate a beautiful, engaging bedtime story that is approximately 500 words long.
+    const prompt = `You are a master bedtime storyteller. Generate a beautiful, engaging bedtime story that is approximately 250 words long.
 
 Child's Details:
 - Name: ${profile.name}
@@ -49,7 +49,7 @@ Child's Details:
 Story Theme/Prompt from Parent: ${profile.parentPrompt}
 
 Requirements:
-1. Make the story exactly around 500 words
+1. Make the story exactly around 250 words
 2. Include ${profile.name} as the main character
 3. Follow the ${profile.storytellingTone} tone throughout
 4. Base the story on this theme: "${profile.parentPrompt}"
@@ -62,12 +62,13 @@ Requirements:
 8. The story should gradually become more peaceful and slower-paced as it progresses
 9. End with ${profile.name} feeling safe, content, and ready for sleep
 10. Do not include a title, just the story text
+11. IMPORTANT: Break the story into short paragraphs of ONLY 1-2 sentences each. Each paragraph should be separated by a newline. This is crucial for pacing and narration.
 
 Generate the story now:`;
 
     console.log('Attempting to generate story...');
 
-    // Use the most stable model name
+    // Use the stable flash model
     const modelName = 'gemini-2.5-flash';
     
     try {
@@ -136,7 +137,7 @@ Generate ONLY the image description, nothing else.`;
   return imagePrompts;
 }
 
-// Generate image using Flux via fal.ai
+// Generate image using Google Gemini Imagen
 app.post('/api/generate-image', async (req, res) => {
   try {
     const { prompt, paragraphIndex } = req.body;
@@ -145,32 +146,43 @@ app.post('/api/generate-image', async (req, res) => {
       return res.status(400).json({ error: 'Image prompt is required' });
     }
 
-    console.log(`Generating image for paragraph ${paragraphIndex}...`);
-
-    // Use Flux Schnell for fast generation (2-4 seconds)
-    const result = await fal.subscribe("fal-ai/flux/schnell", {
-      input: {
-        prompt: `${prompt}, dreamy illustration, soft colors, peaceful bedtime atmosphere, children's book style`,
-        image_size: "landscape_16_9",
-        num_inference_steps: 4,
-        num_images: 1,
-        enable_safety_checker: true
-      },
-      logs: true,
-      onQueueUpdate: (update) => {
-        if (update.status === "IN_PROGRESS") {
-          console.log(`Image generation progress: ${paragraphIndex}`);
-        }
-      }
-    });
-
-    if (result.data && result.data.images && result.data.images[0]) {
-      const imageUrl = result.data.images[0].url;
-      console.log(`✓ Image generated successfully for paragraph ${paragraphIndex}`);
-      return res.json({ imageUrl, paragraphIndex });
-    } else {
-      throw new Error('No image generated');
+    if (!process.env.VITE_GEMINI_API_KEY) {
+      return res.status(500).json({ error: 'Gemini API key not configured' });
     }
+
+    console.log(`🎨 Generating image for paragraph ${paragraphIndex} with Gemini Imagen...`);
+
+    const enhancedPrompt = `${prompt}, dreamy illustration, soft colors, peaceful bedtime atmosphere, children's book style`;
+
+    const response = await axios.post(
+      `https://generativelanguage.googleapis.com/v1beta/models/imagen-4.0-generate-001:predict?key=${process.env.VITE_GEMINI_API_KEY}`,
+      {
+        instances: [{ prompt: enhancedPrompt }],
+        parameters: { 
+          sampleCount: 1,
+          aspectRatio: '16:9',
+          safetyFilterLevel: 'block_some',
+          personGeneration: 'allow_all'
+        }
+      },
+      {
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        timeout: 60000,
+      }
+    );
+
+    const base64Image = response.data?.predictions?.[0]?.bytesBase64Encoded;
+    if (!base64Image) {
+      throw new Error('No image data in response');
+    }
+
+    // Return base64 data URL for direct browser usage
+    const imageUrl = `data:image/png;base64,${base64Image}`;
+    
+    console.log(`✓ Image generated successfully for paragraph ${paragraphIndex}`);
+    return res.json({ imageUrl, paragraphIndex });
 
   } catch (error) {
     console.error('Image generation failed:', error);

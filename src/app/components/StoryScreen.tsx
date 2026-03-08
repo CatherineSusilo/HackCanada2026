@@ -1,9 +1,12 @@
 import { useState, useEffect, useRef } from 'react';
-import { Moon, Pause, Play, Info, X } from 'lucide-react';
+import { motion, AnimatePresence } from 'motion/react';
+import { Moon, X, Info } from 'lucide-react';
 import type { ChildProfile, StorySummary } from '../App';
 import { DriftMeter } from './DriftMeter';
+import VitalsMonitor from './VitalsMonitor';
 import { generateStorySegment } from '../utils/storyGenerator';
 import { calculateDriftScore } from '../utils/driftCalculator';
+import { useApi } from '../../lib/api';
 
 interface StoryScreenProps {
   profile: ChildProfile;
@@ -11,172 +14,284 @@ interface StoryScreenProps {
 }
 
 export function StoryScreen({ profile, onComplete }: StoryScreenProps) {
+  const api = useApi();
   const [driftScore, setDriftScore] = useState(0);
   const fullStory = profile.generatedStory || 'Once upon a time...';
   const paragraphs = fullStory.split('\n').filter(p => p.trim().length > 0);
+
   const [currentParagraphIndex, setCurrentParagraphIndex] = useState(0);
-  const [currentParagraph, setCurrentParagraph] = useState('');
-  const [backgroundImage, setBackgroundImage] = useState('');
+  const [currentText, setCurrentText] = useState('');
+  const [bgImage, setBgImage] = useState('');
   const [isPlaying, setIsPlaying] = useState(true);
   const [isSpeaking, setIsSpeaking] = useState(false);
-  const [isPanelOpen, setIsPanelOpen] = useState(false);
-  const [storyTitle] = useState(
-    `${profile.name}'s Bedtime Story`
-  );
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const [driftHistory, setDriftHistory] = useState<number[]>([0]);
+  const [vitalsConnected, setVitalsConnected] = useState(false);
+  const [vitalsSleepiness, setVitalsSleepiness] = useState(0);
+  const [storyDone, setStoryDone] = useState(false);
+  const [storySessionId, setStorySessionId] = useState<string | null>(null);
+  const [showHint, setShowHint] = useState(true);
+  const [isPanelOpen, setIsPanelOpen] = useState(false);
 
   const imagePromptsRef = useRef<any[]>((window as any).storyImagePrompts || []);
-  const startTimeRef = useRef<number>(Date.now());
-  const storyPhaseRef = useRef<number>(0);
-  const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
+  const startTimeRef = useRef(Date.now());
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const generatedImagesRef = useRef<Map<number, string>>(new Map());
+  const imageGenInProgressRef = useRef<Set<number>>(new Set());
 
-  useEffect(() => {
-    const initialScore = calculateDriftScore(profile.initialState, 0);
-    setDriftScore(initialScore);
-    setDriftHistory([initialScore]);
-    
-    // Debug: log image prompts
-    console.log('Image prompts available:', imagePromptsRef.current.length);
-    if (imagePromptsRef.current.length > 0) {
-      console.log('First image prompt:', imagePromptsRef.current[0]);
-    }
-  }, [profile.initialState]);
-
-  useEffect(() => {
-    if (!isPlaying) return;
-
-    const interval = setInterval(() => {
-      setElapsedSeconds((prev) => prev + 1);
-    }, 1000);
-
-    return () => clearInterval(interval);
-  }, [isPlaying]);
-
-  useEffect(() => {
-    if (!isPlaying || currentParagraphIndex >= paragraphs.length || isSpeaking) return;
-
-    const paragraph = paragraphs[currentParagraphIndex];
-    
-    // Set current paragraph (replaces previous)
-    setCurrentParagraph(paragraph);
-    
-    // Update background image based on paragraph - generate with Flux
-    const imagePrompt = imagePromptsRef.current[currentParagraphIndex];
-    console.log(`Paragraph ${currentParagraphIndex}: imagePrompt =`, imagePrompt);
-    
-    if (imagePrompt) {
-      // Generate image using Flux via backend
-      fetch('http://localhost:3001/api/generate-image', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          prompt: imagePrompt.prompt,
-          paragraphIndex: currentParagraphIndex
-        }),
-      })
-      .then(res => res.json())
-      .then(data => {
-        if (data.imageUrl) {
-          console.log('✓ Generated image URL:', data.imageUrl);
-          setBackgroundImage(data.imageUrl);
-        }
-      })
-      .catch(error => {
-        console.error('Failed to generate image:', error);
-        // Fallback to a static image
-        const fallbackPhotos = [
-          '1519681393784-d120267933ba',
-          '1444703851336-926a91bfc5f1',
-          '1464822759023-fed622ff2c3b'
-        ];
-        const photoId = fallbackPhotos[currentParagraphIndex % fallbackPhotos.length];
-        setBackgroundImage(`https://images.unsplash.com/photo-${photoId}?w=1920&h=1080&fit=crop`);
-      });
-    }
-    
-    // Speak the paragraph
-    speakParagraph(paragraph);
-
-  }, [isPlaying, currentParagraphIndex, paragraphs, isSpeaking]);
-
-  const speakParagraph = (text: string) => {
-    if ('speechSynthesis' in window && text) {
-      window.speechSynthesis.cancel();
-      setIsSpeaking(true);
-
-      const newScore = calculateDriftScore(profile.initialState, elapsedSeconds);
-      setDriftScore(newScore);
-      setDriftHistory((prev) => [...prev, newScore]);
-
-      const utterance = new SpeechSynthesisUtterance(text);
-      utterance.rate = Math.max(0.6, 1.0 - newScore / 200);
-      utterance.volume = Math.max(0.4, 1.0 - newScore / 150);
-      utterance.pitch = Math.max(0.8, 1.0 - newScore / 400);
-
-      const voices = window.speechSynthesis.getVoices();
-      const voice = voices.find(v => v.lang.startsWith('en')) || voices[0];
-      if (voice) utterance.voice = voice;
-
-      utterance.onend = () => {
-        setIsSpeaking(false);
-        setCurrentParagraphIndex(prev => prev + 1);
-        
-        // Check if story is complete
-        if (currentParagraphIndex >= paragraphs.length - 1 || newScore >= 85) {
-          setTimeout(() => {
-            completeStory();
-          }, 2000);
-        }
-      };
-
-      utteranceRef.current = utterance;
-      window.speechSynthesis.speak(utterance);
-    }
-  };
-
-  const completeStory = () => {
-    setIsPlaying(false);
-    window.speechSynthesis.cancel();
-
-    const totalMinutes = Math.floor(elapsedSeconds / 60);
-    const remainingSeconds = elapsedSeconds % 60;
-    const duration = `${totalMinutes}m ${remainingSeconds}s`;
-
-    const sleepTime = new Date(startTimeRef.current + elapsedSeconds * 1000);
-    const sleepOnsetTime = sleepTime.toLocaleTimeString('en-US', {
-      hour: 'numeric',
-      minute: '2-digit',
-      hour12: true,
-    });
-
-    const summary: StorySummary = {
-      title: storyTitle,
-      duration,
-      sleepOnsetTime,
-      driftCurve: driftHistory,
-    };
-
-    setTimeout(() => {
-      onComplete(summary);
-    }, 2000);
-  };
-
-  const togglePlayPause = () => {
-    if (isPlaying) {
-      window.speechSynthesis.pause();
-    } else {
-      window.speechSynthesis.resume();
-    }
-    setIsPlaying(!isPlaying);
-  };
+  const storyTitle = 'Bedtime Story';
+  const backgroundImage = bgImage;
 
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
     return `${mins}:${secs.toString().padStart(2, '0')}`;
+  };
+
+  const handleVitalsUpdate = (sleepiness: number, isAsleep: boolean) => {
+    setVitalsConnected(true);
+    setVitalsSleepiness(sleepiness);
+    
+    // If vitals show child is asleep, boost drift score
+    if (isAsleep) {
+      const boostedScore = Math.min(100, driftScore + 20);
+      setDriftScore(boostedScore);
+      setDriftHistory((prev) => [...prev, boostedScore]);
+    }
+  };
+
+  useEffect(() => {
+    const score = calculateDriftScore(profile.initialState, 0);
+    setDriftScore(score);
+    setDriftHistory([score]);
+
+    console.log('Image prompts available:', imagePromptsRef.current.length);
+
+    // Save story session (fire-and-forget)
+    if (profile.childId) {
+      api.createStory({
+        childId: profile.childId,
+        storyTitle: 'Bedtime Story',
+        storyContent: fullStory,
+        parentPrompt: profile.parentPrompt,
+        storytellingTone: profile.storytellingTone,
+        initialState: profile.initialState,
+        initialDriftScore: score,
+        imagePrompts: imagePromptsRef.current,
+        generatedImages: [],
+        modelUsed: 'gemini-2.5-flash',
+      }).then(s => setStorySessionId(s.id)).catch(e => console.warn('Session save failed:', e));
+    }
+
+    // Preload first image
+    generateImageForIndex(0);
+
+    const hintTimer = setTimeout(() => setShowHint(false), 4000);
+    return () => clearTimeout(hintTimer);
+  }, []);
+
+  const generateImageForIndex = async (paraIdx: number) => {
+    const prompts = imagePromptsRef.current;
+    console.log(`🖼️ generateImageForIndex(${paraIdx}): ${prompts.length} prompts available`);
+    if (prompts.length === 0 || imageGenInProgressRef.current.has(paraIdx)) return;
+
+    const promptIdx = Math.min(
+      Math.floor((paraIdx / Math.max(paragraphs.length, 1)) * prompts.length),
+      prompts.length - 1
+    );
+    if (generatedImagesRef.current.has(promptIdx)) return;
+
+    imageGenInProgressRef.current.add(paraIdx);
+    try {
+      console.log(`🖼️ Requesting image for prompt ${promptIdx}:`, prompts[promptIdx]?.prompt?.substring(0, 80));
+      const data = await api.generateImage(prompts[promptIdx].prompt);
+      console.log(`🖼️ Image response:`, data?.imageUrl ? 'got URL' : 'no URL', data);
+      if (data?.imageUrl) {
+        generatedImagesRef.current.set(promptIdx, data.imageUrl);
+        const img = new Image();
+        img.src = data.imageUrl;
+        if (paraIdx <= currentParagraphIndex) {
+          setBgImage(data.imageUrl);
+        }
+      }
+    } catch (e) {
+      console.error('🖼️ Image gen failed for paragraph', paraIdx, e);
+    }
+    imageGenInProgressRef.current.delete(paraIdx);
+  };
+
+  // Timer
+  useEffect(() => {
+    if (!isPlaying || storyDone) return;
+    const iv = setInterval(() => setElapsedSeconds(p => p + 1), 1000);
+    return () => clearInterval(iv);
+  }, [isPlaying, storyDone]);
+
+  // Speak paragraph using ElevenLabs
+  const speakParagraph = async (text: string) => {
+    if (!text) return;
+    setIsSpeaking(true);
+
+    // Calculate drift score, optionally boosted by vitals data
+    let newScore = calculateDriftScore(profile.initialState, elapsedSeconds);
+    
+    // If vitals are connected, blend the scores
+    if (vitalsConnected) {
+      const vitalsScore = vitalsSleepiness * 100;
+      newScore = (newScore * 0.6) + (vitalsScore * 0.4); // 60% time-based, 40% vitals-based
+    }
+    
+    setDriftScore(newScore);
+    setDriftHistory((prev) => [...prev, newScore]);
+
+    try {
+      // Voice mapping for different storytelling tones
+      const voiceMap: Record<string, string> = {
+        calming: 'XhNlP8uwiH6XZSFnH1yL',    // Elizabeth
+        energetic: 'V2bPluzT7MuirpucVAKH',   // Frank
+        sad: 'wScwPA1qCkWo5R2dmlS8',         // Charlotte
+        adventurous: 'kSIyQ8cADEzDIL2F7AbG', // Niel
+        none: 'XhNlP8uwiH6XZSFnH1yL',        // Elizabeth - default
+      };
+
+      const voiceId = voiceMap[profile.storytellingTone] || localStorage.getItem('ai_selected_voice') || 'JBFqnCBsd6RMkjVDRZzb';
+
+      const blob = await api.generateAudio(text, voiceId);
+      const url = URL.createObjectURL(blob);
+      const audio = new Audio(url);
+
+      audio.onended = () => {
+        setIsSpeaking(false);
+        if (currentParagraphIndex >= paragraphs.length - 1 || newScore >= 90) {
+          completeStory();
+        } else {
+          setCurrentParagraphIndex((prev) => prev + 1);
+        }
+      };
+
+      audio.onerror = () => {
+        console.error('Audio playback failed');
+        setIsSpeaking(false);
+        // Move to next paragraph anyway
+        if (currentParagraphIndex < paragraphs.length - 1) {
+          setCurrentParagraphIndex((prev) => prev + 1);
+        }
+      };
+
+      audio.play();
+
+    } catch (error) {
+      console.warn('ElevenLabs failed, falling back to Web Speech API:', error);
+      speakWithBrowserTTS(text, newScore);
+    }
+  };
+
+  const speakWithBrowserTTS = (text: string, newScore: number) => {
+    const synth = window.speechSynthesis;
+    synth.cancel();
+    const utterance = new SpeechSynthesisUtterance(text);
+
+    // Pick a soft voice matching the storytelling tone
+    const voices = synth.getVoices();
+    const toneRateMap: Record<string, number> = {
+      calming: 0.85,
+      energetic: 1.0,
+      sad: 0.8,
+      adventurous: 0.95,
+      none: 0.85,
+    };
+    utterance.rate = toneRateMap[profile.storytellingTone] || 0.85;
+    utterance.pitch = 1.0;
+    utterance.volume = 1.0;
+
+    // Prefer a female English voice for bedtime stories
+    const preferred = voices.find(v => v.lang.startsWith('en') && v.name.includes('Samantha'))
+      || voices.find(v => v.lang.startsWith('en') && v.name.toLowerCase().includes('female'))
+      || voices.find(v => v.lang.startsWith('en'));
+    if (preferred) utterance.voice = preferred;
+
+    utterance.onend = () => {
+      setIsSpeaking(false);
+      if (currentParagraphIndex >= paragraphs.length - 1 || newScore >= 90) {
+        completeStory();
+      } else {
+        setCurrentParagraphIndex((prev) => prev + 1);
+      }
+    };
+
+    utterance.onerror = () => {
+      setIsSpeaking(false);
+      if (currentParagraphIndex < paragraphs.length - 1) {
+        setCurrentParagraphIndex((prev) => prev + 1);
+      }
+    };
+
+    synth.speak(utterance);
+  };
+
+  // Trigger paragraph playback
+  useEffect(() => {
+    if (!isPlaying || currentParagraphIndex >= paragraphs.length || isSpeaking || storyDone) return;
+
+    const text = paragraphs[currentParagraphIndex];
+    setCurrentText(text);
+
+    // Update background from cached images
+    const prompts = imagePromptsRef.current;
+    if (prompts.length > 0) {
+      const promptIdx = Math.min(
+        Math.floor((currentParagraphIndex / paragraphs.length) * prompts.length),
+        prompts.length - 1
+      );
+      const cached = generatedImagesRef.current.get(promptIdx);
+      if (cached) setBgImage(cached);
+
+      // Preload next scene
+      const nextPromptIdx = Math.min(
+        Math.floor(((currentParagraphIndex + 1) / paragraphs.length) * prompts.length),
+        prompts.length - 1
+      );
+      if (nextPromptIdx !== promptIdx) {
+        generateImageForIndex(currentParagraphIndex + 1);
+      }
+    }
+
+    // Speak the paragraph using ElevenLabs
+    speakParagraph(text);
+  }, [isPlaying, currentParagraphIndex, isSpeaking, storyDone]);
+
+  const completeStory = async () => {
+    setStoryDone(true);
+    setIsPlaying(false);
+
+    const totalMin = Math.floor(elapsedSeconds / 60);
+    const remSec = elapsedSeconds % 60;
+    const duration = `${totalMin}m ${remSec}s`;
+    const sleepTime = new Date(startTimeRef.current + elapsedSeconds * 1000);
+    const sleepOnsetTime = sleepTime.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+
+    if (storySessionId) {
+      try {
+        await api.updateStory(storySessionId, {
+          endTime: new Date().toISOString(),
+          duration: elapsedSeconds,
+          sleepOnsetTime: new Date().toISOString(),
+          completed: true,
+          finalDriftScore: Math.round(driftScore),
+          driftScoreHistory: driftHistory.map((s: number) => Math.round(s)),
+        });
+      } catch (e) {
+        console.warn('Failed to save final session:', e);
+      }
+    }
+
+    setTimeout(() => {
+      onComplete({ title: 'Bedtime Story', duration, sleepOnsetTime, driftCurve: driftHistory, childId: profile.childId });
+    }, 3000);
+  };
+
+  const togglePlayPause = () => {
+    setIsPlaying(!isPlaying);
   };
 
   return (
@@ -195,6 +310,11 @@ export function StoryScreen({ profile, onComplete }: StoryScreenProps) {
           <div className="p-6">
             <div className="flex items-center gap-3 mb-4">
               <Moon className="w-6 h-6 text-indigo-300" />
+
+              {/* Vitals Monitor */}
+              <div className="pt-3 border-t border-white/10">
+                <VitalsMonitor onVitalsUpdate={handleVitalsUpdate} />
+              </div>
               <div>
                 <h2 className="text-white font-semibold">{storyTitle}</h2>
                 <p className="text-indigo-300 text-sm">{profile.name}'s bedtime story</p>
@@ -222,46 +342,106 @@ export function StoryScreen({ profile, onComplete }: StoryScreenProps) {
 
       {/* Main content area with background */}
       <div 
-        className="flex-1 p-6 relative flex flex-col"
+        className="flex-1 p-6 relative flex flex-col min-h-screen"
         style={{
           backgroundImage: backgroundImage ? `linear-gradient(rgba(15, 13, 38, 0.4), rgba(15, 13, 38, 0.5)), url(${backgroundImage})` : 'linear-gradient(rgb(15 13 38), rgb(15 13 38))',
           backgroundSize: 'cover',
           backgroundPosition: 'center',
           backgroundRepeat: 'no-repeat',
-          transition: 'background-image 1s ease-in-out',
-          minHeight: 0
+          transition: 'background-image 1s ease-in-out'
         }}
       >
         {/* Spacer to push content to bottom */}
         <div className="flex-1"></div>
 
-        {/* Subtitle-style text at absolute bottom */}
-        <div className="mt-auto">
-          <div className="bg-black/50 backdrop-blur-sm rounded-lg px-6 py-4 border border-white/20 shadow-2xl mb-4">
-            <p className="text-white text-center text-sm leading-relaxed">
-              {currentParagraph || 'Loading your story...'}
-            </p>
-          </div>
-
-          <div className="flex justify-center pb-2">
-            <button
-              onClick={togglePlayPause}
-              className="px-6 py-3 bg-white/10 hover:bg-white/20 text-white rounded-full border border-white/20 transition-all flex items-center gap-2"
+      {/* Subtitle area */}
+      <div className="absolute bottom-0 left-0 right-0 z-10 flex flex-col items-center pb-16 px-8">
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={currentText}
+            initial={{ opacity: 0, y: 15 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            transition={{ duration: 0.5 }}
+            className="px-10 py-5"
+            style={{
+              background: 'rgba(0,0,0,0.65)',
+              borderRadius: '12px',
+              maxWidth: '900px',
+              width: '100%',
+            }}
+          >
+            <p
+              style={{
+                fontFamily: "'Patrick Hand', cursive",
+                fontSize: '32px',
+                color: '#ffffff',
+                textAlign: 'center',
+                lineHeight: '1.45',
+                margin: 0,
+                textShadow: '0 2px 8px rgba(0,0,0,0.5)',
+              }}
             >
-              {isPlaying ? (
-                <>
-                  <Pause className="w-5 h-5" />
-                  <span>Pause</span>
-                </>
-              ) : (
-                <>
-                  <Play className="w-5 h-5" />
-                  <span>Resume</span>
-                </>
-              )}
-            </button>
-          </div>
+              {currentText || 'Loading your story...'}
+            </p>
+          </motion.div>
+        </AnimatePresence>
+
+        {/* Progress bar */}
+        <div className="mt-5 w-48 h-1 rounded-full overflow-hidden" style={{ background: 'rgba(255,255,255,0.15)' }}>
+          <div
+            className="h-full rounded-full transition-all duration-1000"
+            style={{
+              width: `${Math.min(100, ((currentParagraphIndex + 1) / paragraphs.length) * 100)}%`,
+              background: 'rgba(255,255,255,0.6)',
+            }}
+          />
         </div>
+      </div>
+
+      {/* Tap hint */}
+      <AnimatePresence>
+        {showHint && (
+          <motion.div
+            initial={{ opacity: 0.7 }}
+            animate={{ opacity: 0.7 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 1 }}
+            className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-20 pointer-events-none"
+          >
+            <p style={{ fontFamily: "'Patrick Hand', cursive", fontSize: '20px', color: 'rgba(255,255,255,0.6)', textAlign: 'center' }}>
+              tap anywhere to pause
+            </p>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Paused overlay */}
+      <AnimatePresence>
+        {!isPlaying && !storyDone && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="absolute inset-0 z-30 flex items-center justify-center"
+            style={{ background: 'rgba(0,0,0,0.4)' }}
+          >
+            <div className="text-center">
+              <div
+                className="w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-4"
+                style={{ background: 'rgba(255,255,255,0.15)', border: '2px solid rgba(255,255,255,0.3)' }}
+              >
+                <div style={{ width: 0, height: 0, borderTop: '16px solid transparent', borderBottom: '16px solid transparent', borderLeft: '24px solid rgba(255,255,255,0.8)', marginLeft: '4px' }} />
+              </div>
+              <p style={{ fontFamily: "'Patrick Hand', cursive", fontSize: '22px', color: 'rgba(255,255,255,0.7)' }}>
+                tap to resume
+              </p>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <link href="https://fonts.googleapis.com/css2?family=Patrick+Hand&family=Indie+Flower&display=swap" rel="stylesheet" />
       </div>
     </div>
   );
