@@ -36,9 +36,7 @@ export const authMiddleware = (req: Request, res: Response, next: NextFunction) 
     }
     
     console.log('✅ JWT Validation Passed');
-    console.log('📦 Full req.auth object:', JSON.stringify((req as any).auth, null, 2));
-    console.log('👤 User sub:', (req as any).auth?.sub);
-    console.log('👤 User payload:', (req as any).auth?.payload);
+    console.log('👤 User sub:', (req as any).auth?.payload?.sub);
     next();
   });
 };

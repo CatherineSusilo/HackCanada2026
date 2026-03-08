@@ -1,10 +1,10 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { motion } from 'motion/react';
-import { ArrowLeft, Palette, Type, Mic, Upload, Volume2, Trash2 } from 'lucide-react';
+import { ArrowLeft, Palette, Type, Mic, Upload, Volume2, Trash2, Loader2, Check, Play } from 'lucide-react';
 import { useApi } from '../../lib/api';
 
 interface AISettingsProps {
-  onBack: () => void;
+  onBack?: () => void;
 }
 
 export function AISettings({ onBack }: AISettingsProps) {
@@ -15,11 +15,15 @@ export function AISettings({ onBack }: AISettingsProps) {
   const [voices, setVoices] = useState<any[]>([]);
   const [selectedVoice, setSelectedVoice] = useState<any>(null);
   const [uploading, setUploading] = useState(false);
+  const [cloneName, setCloneName] = useState('');
+  const [cloneFiles, setCloneFiles] = useState<File[]>([]);
+  const [cloneStatus, setCloneStatus] = useState<string | null>(null);
+  const [previewingVoice, setPreviewingVoice] = useState<string | null>(null);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
 
   useEffect(() => {
     loadVoices();
     
-    // Load saved settings
     const savedImageStyle = localStorage.getItem('ai_image_style');
     const savedTextTone = localStorage.getItem('ai_text_tone');
     if (savedImageStyle) setImageStyle(savedImageStyle);
@@ -40,32 +44,60 @@ export function AISettings({ onBack }: AISettingsProps) {
     }
   };
 
-  const handleVoiceUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleCloneFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
-    if (!files || files.length === 0) return;
+    if (!files) return;
+    setCloneFiles(prev => [...prev, ...Array.from(files).slice(0, 3 - prev.length)]);
+  };
 
+  const handleCloneVoice = async () => {
+    if (!cloneName.trim() || cloneFiles.length === 0) return;
     setUploading(true);
+    setCloneStatus('converting audio files...');
     try {
-      // Convert audio files to base64
-      const base64Files = [];
-      for (let i = 0; i < Math.min(files.length, 3); i++) {
-        const file = files[i];
-        const base64 = await new Promise<string>((resolve) => {
+      const base64Files: string[] = [];
+      for (const file of cloneFiles) {
+        const b64 = await new Promise<string>((resolve) => {
           const reader = new FileReader();
           reader.onload = () => resolve(reader.result as string);
           reader.readAsDataURL(file);
         });
-        base64Files.push(base64);
+        base64Files.push(b64);
       }
 
-      // TODO: Implement voice cloning via backend
-      alert('Voice upload functionality coming soon! Will clone your voice using ElevenLabs.');
-      
-    } catch (error) {
-      console.error('Failed to upload voice:', error);
-      alert('Failed to upload voice. Please try again.');
+      setCloneStatus('cloning voice with elevenlabs...');
+      const result = await api.cloneVoice(cloneName, `Custom voice: ${cloneName}`, base64Files);
+      setCloneStatus('voice cloned successfully!');
+      setCloneName('');
+      setCloneFiles([]);
+      await loadVoices();
+      if (result.voice_id) {
+        localStorage.setItem('ai_selected_voice', result.voice_id);
+      }
+    } catch (error: any) {
+      console.error('Voice cloning failed:', error);
+      setCloneStatus(`failed: ${error.message || 'unknown error'}`);
     } finally {
       setUploading(false);
+    }
+  };
+
+  const handlePreviewVoice = async (voice: any) => {
+    if (previewingVoice === voice.voice_id) {
+      audioRef.current?.pause();
+      setPreviewingVoice(null);
+      return;
+    }
+    setPreviewingVoice(voice.voice_id);
+    try {
+      const blob = await api.generateAudio('Once upon a time, in a cozy little forest...', voice.voice_id);
+      const url = URL.createObjectURL(blob);
+      if (audioRef.current) audioRef.current.pause();
+      audioRef.current = new Audio(url);
+      audioRef.current.onended = () => setPreviewingVoice(null);
+      audioRef.current.play();
+    } catch {
+      setPreviewingVoice(null);
     }
   };
 
@@ -275,7 +307,7 @@ export function AISettings({ onBack }: AISettingsProps) {
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
           >
-            {/* Voice Upload */}
+            {/* Voice Clone */}
             <div 
               className="p-6 mb-6"
               style={{
@@ -285,7 +317,7 @@ export function AISettings({ onBack }: AISettingsProps) {
               }}
             >
               <h3 
-                className="mb-4"
+                className="mb-3"
                 style={{ 
                   fontFamily: "'Patrick Hand', cursive",
                   fontSize: '24px',
@@ -293,43 +325,81 @@ export function AISettings({ onBack }: AISettingsProps) {
                   color: 'rgba(20, 15, 10, 0.85)' 
                 }}
               >
-                upload your voice
+                clone your voice
               </h3>
               <p 
-                className="mb-6"
+                className="mb-5"
                 style={{ 
                   fontFamily: "'Patrick Hand', cursive",
                   fontSize: '16px',
                   color: 'rgba(30, 20, 15, 0.7)' 
                 }}
               >
-                upload 2-3 audio clips of you reading (at least 30 seconds each) to create an ai clone of your voice
+                upload 1-3 audio clips of you reading (at least 30s each) and elevenlabs will create an ai clone of your voice
               </p>
-              <label className="cursor-pointer">
-                <input
-                  type="file"
-                  multiple
-                  accept="audio/*"
-                  onChange={handleVoiceUpload}
-                  className="hidden"
-                  disabled={uploading}
-                />
-                <div 
-                  className="px-6 py-3 inline-flex items-center gap-2"
+
+              <input
+                type="text"
+                value={cloneName}
+                onChange={(e) => setCloneName(e.target.value)}
+                placeholder="voice name (e.g. Mom's voice)"
+                className="w-full px-4 py-3 mb-4"
+                style={{
+                  fontFamily: "'Patrick Hand', cursive",
+                  fontSize: '17px',
+                  color: 'rgba(20, 15, 10, 0.9)',
+                  background: 'rgba(255, 255, 255, 0.5)',
+                  border: '1.5px solid rgba(40, 30, 20, 0.3)',
+                  outline: 'none',
+                }}
+              />
+
+              {cloneFiles.length > 0 && (
+                <div className="mb-4 space-y-2">
+                  {cloneFiles.map((f, i) => (
+                    <div key={i} className="flex items-center gap-2 px-3 py-2" style={{ background: 'rgba(210, 180, 140, 0.2)', border: '1px solid rgba(40, 30, 20, 0.15)' }}>
+                      <Mic className="w-4 h-4" style={{ color: 'rgba(40, 30, 20, 0.5)' }} />
+                      <span style={{ fontFamily: "'Patrick Hand', cursive", fontSize: '15px', color: 'rgba(30, 20, 15, 0.75)', flex: 1 }}>{f.name}</span>
+                      <button onClick={() => setCloneFiles(cloneFiles.filter((_, j) => j !== i))} className="cursor-pointer p-1" style={{ color: 'rgba(139, 0, 0, 0.6)' }}>
+                        <Trash2 className="w-3 h-3" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              <div className="flex gap-3">
+                {cloneFiles.length < 3 && (
+                  <label className="cursor-pointer">
+                    <input type="file" accept="audio/*" onChange={handleCloneFileSelect} className="hidden" disabled={uploading} />
+                    <div className="px-5 py-2.5 inline-flex items-center gap-2" style={{ fontFamily: "'Patrick Hand', cursive", fontSize: '17px', fontWeight: 'bold', color: 'rgba(20, 15, 10, 0.85)', background: 'rgba(210, 180, 140, 0.3)', border: '2px dashed rgba(40, 30, 20, 0.3)' }}>
+                      <Upload className="w-4 h-4" />
+                      add audio ({cloneFiles.length}/3)
+                    </div>
+                  </label>
+                )}
+                <button
+                  onClick={handleCloneVoice}
+                  disabled={uploading || !cloneName.trim() || cloneFiles.length === 0}
+                  className="px-5 py-2.5 flex items-center gap-2 cursor-pointer disabled:opacity-50"
                   style={{
                     fontFamily: "'Patrick Hand', cursive",
-                    fontSize: '18px',
+                    fontSize: '17px',
                     fontWeight: 'bold',
-                    color: 'rgba(20, 15, 10, 0.85)',
-                    background: 'rgba(210, 180, 140, 0.4)',
-                    border: '2px solid rgba(40, 30, 20, 0.35)',
-                    boxShadow: '0 3px 8px rgba(0, 0, 0, 0.12)',
+                    color: 'rgba(250, 245, 240, 0.95)',
+                    background: 'linear-gradient(135deg, rgba(140, 100, 60, 0.85), rgba(120, 85, 50, 0.9))',
+                    border: '2px solid rgba(160, 120, 80, 0.5)',
                   }}
                 >
-                  <Upload className="w-5 h-5" />
-                  {uploading ? 'processing...' : 'upload voice samples'}
-                </div>
-              </label>
+                  {uploading ? <><Loader2 className="w-4 h-4 animate-spin" /> cloning...</> : 'clone voice'}
+                </button>
+              </div>
+
+              {cloneStatus && (
+                <p className="mt-3" style={{ fontFamily: "'Patrick Hand', cursive", fontSize: '15px', color: cloneStatus.includes('failed') ? 'rgba(180, 60, 60, 0.8)' : 'rgba(60, 100, 60, 0.8)' }}>
+                  {cloneStatus}
+                </p>
+              )}
             </div>
 
             {/* Available Voices */}
@@ -366,10 +436,9 @@ export function AISettings({ onBack }: AISettingsProps) {
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {voices.map((voice) => (
-                    <button
+                    <div
                       key={voice.voice_id}
-                      onClick={() => handleSelectVoice(voice)}
-                      className="p-4 text-left transition-all cursor-pointer"
+                      className="p-4 transition-all"
                       style={{
                         fontFamily: "'Patrick Hand', cursive",
                         fontSize: '17px',
@@ -379,38 +448,36 @@ export function AISettings({ onBack }: AISettingsProps) {
                       }}
                     >
                       <div className="flex items-center gap-3">
-                        <Volume2 className="w-5 h-5" style={{ color: 'rgba(40, 30, 20, 0.6)' }} />
-                        <div className="flex-1">
-                          <p style={{ fontWeight: 'bold', marginBottom: '2px' }}>{voice.name}</p>
+                        <Volume2 className="w-5 h-5 shrink-0" style={{ color: 'rgba(40, 30, 20, 0.6)' }} />
+                        <div className="flex-1 min-w-0">
+                          <p style={{ fontWeight: 'bold', marginBottom: '2px' }} className="truncate">{voice.name}</p>
                           {voice.labels && (
-                            <p 
-                              className="text-sm"
-                              style={{ 
-                                fontSize: '14px',
-                                color: 'rgba(40, 30, 20, 0.5)' 
-                              }}
-                            >
+                            <p className="text-sm truncate" style={{ fontSize: '14px', color: 'rgba(40, 30, 20, 0.5)' }}>
                               {Object.entries(voice.labels).map(([k, v]) => `${k}: ${v}`).join(', ')}
                             </p>
                           )}
                         </div>
-                        {selectedVoice?.voice_id === voice.voice_id && (
-                          <div 
-                            className="text-xs px-2 py-1"
+                        <div className="flex items-center gap-2 shrink-0">
+                          <button
+                            onClick={() => handlePreviewVoice(voice)}
+                            className="p-1.5 cursor-pointer transition-all"
+                            style={{ background: 'rgba(100, 80, 140, 0.15)', border: '1px solid rgba(100, 80, 140, 0.3)' }}
+                          >
+                            {previewingVoice === voice.voice_id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Play className="w-4 h-4" />}
+                          </button>
+                          <button
+                            onClick={() => handleSelectVoice(voice)}
+                            className="p-1.5 cursor-pointer transition-all"
                             style={{
-                              fontFamily: "'Patrick Hand', cursive",
-                              fontSize: '13px',
-                              fontWeight: 'bold',
-                              color: 'rgba(40, 60, 40, 0.8)',
-                              background: 'rgba(100, 150, 100, 0.2)',
-                              border: '1px solid rgba(40, 60, 40, 0.3)',
+                              background: selectedVoice?.voice_id === voice.voice_id ? 'rgba(100, 150, 100, 0.3)' : 'rgba(210, 180, 140, 0.2)',
+                              border: selectedVoice?.voice_id === voice.voice_id ? '1px solid rgba(40, 60, 40, 0.4)' : '1px solid rgba(40, 30, 20, 0.2)',
                             }}
                           >
-                            active
-                          </div>
-                        )}
+                            {selectedVoice?.voice_id === voice.voice_id ? <Check className="w-4 h-4" style={{ color: 'rgba(40, 100, 40, 0.8)' }} /> : <Check className="w-4 h-4" style={{ color: 'rgba(40, 30, 20, 0.3)' }} />}
+                          </button>
+                        </div>
                       </div>
-                    </button>
+                    </div>
                   ))}
                 </div>
               )}
