@@ -253,6 +253,10 @@ export default function App() {
       <Sidebar currentView={sidebarView} onViewChange={handleSidebarViewChange} />
       
       <div className="flex-1 overflow-auto">
+        {appState === 'roadmap' && selectedChild && (
+          <StoryRoadmap child={selectedChild} onStartStory={handleStartStory} onBack={handleBackToDashboard} />
+        )}
+
         {sidebarView === 'dashboard' && appState === 'dashboard' && (
           <ChildDashboard onSelectChild={handleSelectChild} onStartOnboarding={handleStartOnboarding} />
         )}
