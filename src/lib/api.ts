@@ -138,6 +138,32 @@ export const useApi = () => {
     },
     getVoices: () => fetchWithAuth('/audio/voices'),
 
+    // Interactions
+    saveInteraction: (storyId: string, interactionId: string, response: any) =>
+      fetchWithAuth(`/stories/${storyId}/interaction`, {
+        method: 'PATCH',
+        body: JSON.stringify({ interactionId, response }),
+      }),
+
+    // Themes
+    getThemes: () => fetchWithAuth('/themes'),
+    createTheme: (data: { name: string; description: string; icon: string }) =>
+      fetchWithAuth('/themes', { method: 'POST', body: JSON.stringify(data) }),
+    deleteTheme: (themeId: string) =>
+      fetchWithAuth(`/themes/${themeId}`, { method: 'DELETE' }),
+
+    // Characters
+    getCharacters: () => fetchWithAuth('/characters'),
+    getCharacter: (id: string) => fetchWithAuth(`/characters/${id}`),
+    createCharacter: (data: { name: string; description: string; personality?: string; icon?: string }) =>
+      fetchWithAuth('/characters', { method: 'POST', body: JSON.stringify(data) }),
+    updateCharacter: (id: string, data: any) =>
+      fetchWithAuth(`/characters/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
+    deleteCharacter: (id: string) =>
+      fetchWithAuth(`/characters/${id}`, { method: 'DELETE' }),
+    matchCharacterVoice: (id: string) =>
+      fetchWithAuth(`/characters/${id}/match-voice`, { method: 'POST' }),
+
     // Story generation
     generateStory: (profile: any) => fetchWithAuth('/generate/story', {
       method: 'POST',
@@ -147,5 +173,16 @@ export const useApi = () => {
       method: 'POST',
       body: JSON.stringify({ prompt }),
     }),
+    analyzeText: (text: string) => fetchWithAuth('/generate/analyze-text', {
+      method: 'POST',
+      body: JSON.stringify({ text }),
+    }),
+
+    // Voice cloning
+    cloneVoice: (name: string, description: string, files: string[]) =>
+      fetchWithAuth('/audio/clone-voice', {
+        method: 'POST',
+        body: JSON.stringify({ name, description, files }),
+      }),
   };
 };

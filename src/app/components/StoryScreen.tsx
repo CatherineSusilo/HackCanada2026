@@ -7,13 +7,15 @@ import VitalsMonitor from './VitalsMonitor';
 import { generateStorySegment } from '../utils/storyGenerator';
 import { calculateDriftScore } from '../utils/driftCalculator';
 import { useApi } from '../../lib/api';
+import { StoryInteraction, type InteractionData } from './StoryInteraction';
 
 interface StoryScreenProps {
   profile: ChildProfile;
   onComplete: (summary: StorySummary) => void;
+  onExit?: () => void;
 }
 
-export function StoryScreen({ profile, onComplete }: StoryScreenProps) {
+export function StoryScreen({ profile, onComplete, onExit }: StoryScreenProps) {
   const api = useApi();
   const [driftScore, setDriftScore] = useState(0);
   const fullStory = profile.generatedStory || 'Once upon a time...';
@@ -33,6 +35,17 @@ export function StoryScreen({ profile, onComplete }: StoryScreenProps) {
   const [showHint, setShowHint] = useState(true);
   const [isPanelOpen, setIsPanelOpen] = useState(false);
   const [vitalsHistory, setVitalsHistory] = useState<Array<{timestamp: string, pulseRate?: number, breathingRate?: number}>>([]);
+  const [showExitPrompt, setShowExitPrompt] = useState(false);
+  const [exitPin, setExitPin] = useState('');
+  const [exitPinError, setExitPinError] = useState(false);
+  const PARENT_PIN = localStorage.getItem('parent_pin') || '1234';
+  const [activeInteraction, setActiveInteraction] = useState<InteractionData | null>(null);
+  const [interactionAnnounced, setInteractionAnnounced] = useState(false);
+  const [interactionsState, setInteractionsState] = useState<InteractionData[]>(
+    (profile.interactions || []) as InteractionData[]
+  );
+  const completedInteractionsRef = useRef<Set<string>>(new Set());
+  const [insertedBridgeTexts, setInsertedBridgeTexts] = useState<Map<number, string>>(new Map());
 
   const imagePromptsRef = useRef<any[]>((window as any).storyImagePrompts || []);
   const startTimeRef = useRef(Date.now());
@@ -90,7 +103,8 @@ export function StoryScreen({ profile, onComplete }: StoryScreenProps) {
         initialDriftScore: score,
         imagePrompts: imagePromptsRef.current,
         generatedImages: [],
-        modelUsed: 'gemini-2.0-flash',
+        interactions: interactionsState,
+        modelUsed: 'gemini-2.5-flash',
       }).then(s => setStorySessionId(s.id)).catch(e => console.warn('Session save failed:', e));
     }
 
@@ -157,15 +171,16 @@ export function StoryScreen({ profile, onComplete }: StoryScreenProps) {
 
     try {
       // Voice mapping for different storytelling tones
+      const DEFAULT_VOICE = 'dBeBf4ifazyJTIRH3VQh';
       const voiceMap: Record<string, string> = {
-        calming: 'XhNlP8uwiH6XZSFnH1yL',    // Elizabeth
-        energetic: 'V2bPluzT7MuirpucVAKH',   // Frank
-        sad: 'wScwPA1qCkWo5R2dmlS8',         // Charlotte
-        adventurous: 'kSIyQ8cADEzDIL2F7AbG', // Niel
-        none: 'XhNlP8uwiH6XZSFnH1yL',        // Elizabeth - default
+        calming: DEFAULT_VOICE,
+        energetic: DEFAULT_VOICE,
+        sad: DEFAULT_VOICE,
+        adventurous: DEFAULT_VOICE,
+        none: DEFAULT_VOICE,
       };
 
-      const voiceId = voiceMap[profile.storytellingTone] || localStorage.getItem('ai_selected_voice') || 'JBFqnCBsd6RMkjVDRZzb';
+      const voiceId = voiceMap[profile.storytellingTone] || localStorage.getItem('ai_selected_voice') || DEFAULT_VOICE;
 
       const blob = await api.generateAudio(text, voiceId);
       const url = URL.createObjectURL(blob);
@@ -176,16 +191,15 @@ export function StoryScreen({ profile, onComplete }: StoryScreenProps) {
         if (currentParagraphIndex >= paragraphs.length - 1 || newScore >= 90) {
           completeStory();
         } else {
-          setCurrentParagraphIndex((prev) => prev + 1);
+          advanceOrInteract(currentParagraphIndex + 1);
         }
       };
 
       audio.onerror = () => {
         console.error('Audio playback failed');
         setIsSpeaking(false);
-        // Move to next paragraph anyway
         if (currentParagraphIndex < paragraphs.length - 1) {
-          setCurrentParagraphIndex((prev) => prev + 1);
+          advanceOrInteract(currentParagraphIndex + 1);
         }
       };
 
@@ -226,23 +240,117 @@ export function StoryScreen({ profile, onComplete }: StoryScreenProps) {
       if (currentParagraphIndex >= paragraphs.length - 1 || newScore >= 90) {
         completeStory();
       } else {
-        setCurrentParagraphIndex((prev) => prev + 1);
+        advanceOrInteract(currentParagraphIndex + 1);
       }
     };
 
     utterance.onerror = () => {
       setIsSpeaking(false);
       if (currentParagraphIndex < paragraphs.length - 1) {
-        setCurrentParagraphIndex((prev) => prev + 1);
+        advanceOrInteract(currentParagraphIndex + 1);
       }
     };
 
     synth.speak(utterance);
   };
 
+  const announceAndShowInteraction = async (interaction: InteractionData) => {
+    setIsPlaying(false);
+    setActiveInteraction(interaction);
+    setInteractionAnnounced(false);
+    setCurrentText(interaction.prompt);
+
+    // Generate a new background image for the interaction scene
+    if (interaction.imagePrompt) {
+      api.generateImage(interaction.imagePrompt).then((data: any) => {
+        if (data?.imageUrl) setBgImage(data.imageUrl);
+      }).catch(() => {});
+    }
+
+    // Announce the prompt via TTS, then reveal the buttons
+    try {
+      const DEFAULT_VOICE = 'dBeBf4ifazyJTIRH3VQh';
+      const voiceId = localStorage.getItem('ai_selected_voice') || DEFAULT_VOICE;
+      const blob = await api.generateAudio(interaction.prompt, voiceId);
+      const url = URL.createObjectURL(blob);
+      const audio = new Audio(url);
+      audio.onended = () => setInteractionAnnounced(true);
+      audio.onerror = () => setInteractionAnnounced(true);
+      audio.play();
+    } catch {
+      setInteractionAnnounced(true);
+    }
+  };
+
+  const advanceOrInteract = (nextParaIndex: number) => {
+    const pending = interactionsState.find(
+      (i) => i.paragraphIndex === nextParaIndex && !completedInteractionsRef.current.has(i.id)
+    );
+    if (pending) {
+      announceAndShowInteraction(pending);
+    } else {
+      setCurrentParagraphIndex(nextParaIndex);
+    }
+  };
+
+  const handleInteractionResponse = async (interactionId: string, response: any) => {
+    const interaction = interactionsState.find((i) => i.id === interactionId);
+    if (!interaction) return;
+
+    completedInteractionsRef.current.add(interactionId);
+
+    const updated = interactionsState.map((i) =>
+      i.id === interactionId ? { ...i, response } : i
+    );
+    setInteractionsState(updated);
+
+    if (storySessionId) {
+      api.saveInteraction(storySessionId, interactionId, response).catch((e: any) =>
+        console.warn('Failed to save interaction:', e)
+      );
+    }
+
+    setActiveInteraction(null);
+    setInteractionAnnounced(false);
+
+    if (interaction.type === 'choice' && response.bridgeText) {
+      const bridgeIdx = interaction.paragraphIndex;
+      setInsertedBridgeTexts((prev) => new Map(prev).set(bridgeIdx, response.bridgeText));
+      setCurrentText(response.bridgeText);
+      setIsSpeaking(true);
+
+      try {
+        const DEFAULT_VOICE = 'dBeBf4ifazyJTIRH3VQh';
+        const voiceId = localStorage.getItem('ai_selected_voice') || DEFAULT_VOICE;
+        const blob = await api.generateAudio(response.bridgeText, voiceId);
+        const url = URL.createObjectURL(blob);
+        const audio = new Audio(url);
+        audio.onended = () => {
+          setIsSpeaking(false);
+          setIsPlaying(true);
+          setCurrentParagraphIndex(interaction.paragraphIndex);
+        };
+        audio.onerror = () => {
+          setIsSpeaking(false);
+          setIsPlaying(true);
+          setCurrentParagraphIndex(interaction.paragraphIndex);
+        };
+        audio.play();
+      } catch {
+        setIsSpeaking(false);
+        setIsPlaying(true);
+        setCurrentParagraphIndex(interaction.paragraphIndex);
+      }
+    } else {
+      setIsPlaying(true);
+      setCurrentParagraphIndex(interaction.paragraphIndex);
+    }
+  };
+
   // Trigger paragraph playback
   useEffect(() => {
     if (!isPlaying || currentParagraphIndex >= paragraphs.length || isSpeaking || storyDone) return;
+    if (activeInteraction) return;
 
     const text = paragraphs[currentParagraphIndex];
     setCurrentText(text);
@@ -269,7 +377,7 @@ export function StoryScreen({ profile, onComplete }: StoryScreenProps) {
 
     // Speak the paragraph using ElevenLabs
     speakParagraph(text);
-  }, [isPlaying, currentParagraphIndex, isSpeaking, storyDone]);
+  }, [isPlaying, currentParagraphIndex, isSpeaking, storyDone, activeInteraction]);
 
   const completeStory = async () => {
     setStoryDone(true);
@@ -428,27 +536,152 @@ export function StoryScreen({ profile, onComplete }: StoryScreenProps) {
         )}
       </AnimatePresence>
 
+      {/* Interactive learning overlay */}
+      <AnimatePresence>
+        {activeInteraction && (
+          <StoryInteraction
+            interaction={activeInteraction}
+            childAge={profile.age}
+            announced={interactionAnnounced}
+            onRespond={handleInteractionResponse}
+          />
+        )}
+      </AnimatePresence>
+
       {/* Paused overlay */}
       <AnimatePresence>
-        {!isPlaying && !storyDone && (
+        {!isPlaying && !storyDone && !activeInteraction && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             className="absolute inset-0 z-30 flex items-center justify-center"
             style={{ background: 'rgba(0,0,0,0.4)' }}
+            onClick={() => { if (!showExitPrompt) { setIsPlaying(true); } }}
           >
-            <div className="text-center">
-              <div
-                className="w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-4"
-                style={{ background: 'rgba(255,255,255,0.15)', border: '2px solid rgba(255,255,255,0.3)' }}
-              >
-                <div style={{ width: 0, height: 0, borderTop: '16px solid transparent', borderBottom: '16px solid transparent', borderLeft: '24px solid rgba(255,255,255,0.8)', marginLeft: '4px' }} />
+            {!showExitPrompt ? (
+              <div className="text-center">
+                <div
+                  className="w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-4"
+                  style={{ background: 'rgba(255,255,255,0.15)', border: '2px solid rgba(255,255,255,0.3)' }}
+                >
+                  <div style={{ width: 0, height: 0, borderTop: '16px solid transparent', borderBottom: '16px solid transparent', borderLeft: '24px solid rgba(255,255,255,0.8)', marginLeft: '4px' }} />
+                </div>
+                <p style={{ fontFamily: "'Patrick Hand', cursive", fontSize: '22px', color: 'rgba(255,255,255,0.7)' }}>
+                  tap to resume
+                </p>
+
+                {onExit && (
+                  <button
+                    onClick={(e) => { e.stopPropagation(); setShowExitPrompt(true); }}
+                    className="mt-8 px-5 py-2 cursor-pointer"
+                    style={{
+                      fontFamily: "'Patrick Hand', cursive",
+                      fontSize: '15px',
+                      color: 'rgba(255,255,255,0.4)',
+                      background: 'rgba(255,255,255,0.06)',
+                      border: '1px solid rgba(255,255,255,0.12)',
+                      borderRadius: '8px',
+                    }}
+                  >
+                    🔒 parent exit
+                  </button>
+                )}
               </div>
-              <p style={{ fontFamily: "'Patrick Hand', cursive", fontSize: '22px', color: 'rgba(255,255,255,0.7)' }}>
-                tap to resume
-              </p>
-            </div>
+            ) : (
+              <motion.div
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                onClick={(e) => e.stopPropagation()}
+                className="p-6 text-center"
+                style={{
+                  background: 'rgba(0,0,0,0.75)',
+                  borderRadius: '16px',
+                  border: '2px solid rgba(255,255,255,0.15)',
+                  backdropFilter: 'blur(8px)',
+                  minWidth: '280px',
+                }}
+              >
+                <p style={{ fontFamily: "'Patrick Hand', cursive", fontSize: '20px', color: 'rgba(255,255,255,0.8)', marginBottom: '16px' }}>
+                  enter parent PIN
+                </p>
+                <input
+                  type="password"
+                  inputMode="numeric"
+                  maxLength={4}
+                  value={exitPin}
+                  onChange={(e) => { setExitPin(e.target.value); setExitPinError(false); }}
+                  autoFocus
+                  className="w-full px-4 py-3 text-center mb-3"
+                  placeholder="••••"
+                  style={{
+                    fontFamily: "'Patrick Hand', cursive",
+                    fontSize: '28px',
+                    letterSpacing: '8px',
+                    color: '#ffffff',
+                    background: 'rgba(255,255,255,0.1)',
+                    border: exitPinError ? '2px solid rgba(255,100,100,0.6)' : '2px solid rgba(255,255,255,0.2)',
+                    borderRadius: '10px',
+                    outline: 'none',
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      if (exitPin === PARENT_PIN) {
+                        onExit?.();
+                      } else {
+                        setExitPinError(true);
+                        setExitPin('');
+                      }
+                    }
+                  }}
+                />
+                {exitPinError && (
+                  <p style={{ fontFamily: "'Patrick Hand', cursive", fontSize: '15px', color: 'rgba(255,100,100,0.8)', marginBottom: '8px' }}>
+                    wrong pin, try again
+                  </p>
+                )}
+                <div className="flex gap-3 justify-center mt-3">
+                  <button
+                    onClick={() => {
+                      if (exitPin === PARENT_PIN) {
+                        onExit?.();
+                      } else {
+                        setExitPinError(true);
+                        setExitPin('');
+                      }
+                    }}
+                    className="px-5 py-2 cursor-pointer"
+                    style={{
+                      fontFamily: "'Patrick Hand', cursive",
+                      fontSize: '17px',
+                      color: '#ffffff',
+                      background: 'rgba(130,100,255,0.4)',
+                      border: '1px solid rgba(180,160,255,0.4)',
+                      borderRadius: '8px',
+                    }}
+                  >
+                    exit
+                  </button>
+                  <button
+                    onClick={() => { setShowExitPrompt(false); setExitPin(''); setExitPinError(false); }}
+                    className="px-5 py-2 cursor-pointer"
+                    style={{
+                      fontFamily: "'Patrick Hand', cursive",
+                      fontSize: '17px',
+                      color: 'rgba(255,255,255,0.6)',
+                      background: 'rgba(255,255,255,0.08)',
+                      border: '1px solid rgba(255,255,255,0.15)',
+                      borderRadius: '8px',
+                    }}
+                  >
+                    cancel
+                  </button>
+                </div>
+                <p style={{ fontFamily: "'Patrick Hand', cursive", fontSize: '12px', color: 'rgba(255,255,255,0.3)', marginTop: '12px' }}>
+                  default PIN: 1234
+                </p>
+              </motion.div>
+            )}
           </motion.div>
         )}
       </AnimatePresence>

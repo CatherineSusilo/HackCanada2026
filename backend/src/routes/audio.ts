@@ -1,13 +1,14 @@
 import { Router, Response } from 'express';
 import { AuthRequest } from '../middleware/auth';
 import axios from 'axios';
+import FormData from 'form-data';
 
 const router = Router();
 
 // Generate audio from text using ElevenLabs
 router.post('/', async (req: AuthRequest, res: Response) => {
   try {
-    const { text, voiceId = 'pNInz6obpgDQGcFmaJgB' } = req.body; // Default: Adam voice
+    const { text, voiceId = 'dBeBf4ifazyJTIRH3VQh' } = req.body;
 
     if (!text) {
       return res.status(400).json({ error: 'Text is required' });
@@ -95,7 +96,7 @@ router.get('/voices', async (req: AuthRequest, res: Response) => {
 // Clone voice (for parent voice upload)
 router.post('/clone-voice', async (req: AuthRequest, res: Response) => {
   try {
-    const { name, description, files } = req.body; // files should be base64 audio data
+    const { name, description, files } = req.body;
 
     if (!process.env.ELEVENLABS_API_KEY) {
       return res.status(500).json({ error: 'ElevenLabs API key not configured' });
@@ -105,19 +106,28 @@ router.post('/clone-voice', async (req: AuthRequest, res: Response) => {
       return res.status(400).json({ error: 'Name and audio files are required' });
     }
 
-    console.log('🎤 Cloning voice:', name);
+    console.log('🎤 Cloning voice:', name, `(${files.length} samples)`);
+
+    const formData = new FormData();
+    formData.append('name', name);
+    formData.append('description', description || 'Parent voice clone');
+
+    for (let i = 0; i < files.length; i++) {
+      const dataUrl: string = files[i];
+      const matches = dataUrl.match(/^data:([^;]+);base64,(.+)$/);
+      if (!matches) continue;
+      const buffer = Buffer.from(matches[2], 'base64');
+      const ext = matches[1].includes('wav') ? 'wav' : matches[1].includes('webm') ? 'webm' : 'mp3';
+      formData.append('files', buffer, { filename: `sample_${i}.${ext}`, contentType: matches[1] });
+    }
 
     const response = await axios.post(
       'https://api.elevenlabs.io/v1/voices/add',
-      {
-        name,
-        description: description || 'Parent voice clone',
-        files,
-      },
+      formData,
       {
         headers: {
+          ...formData.getHeaders(),
           'xi-api-key': process.env.ELEVENLABS_API_KEY,
-          'Content-Type': 'application/json',
         },
       }
     );

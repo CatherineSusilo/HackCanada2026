@@ -21,6 +21,8 @@ import statisticsRoutes from './routes/statistics';
 import audioRoutes from './routes/audio';
 import generateRoutes from './routes/generate';
 import vitalsRoutes from './routes/vitals';
+import themeRoutes from './routes/themes';
+import characterRoutes from './routes/characters';
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -32,7 +34,7 @@ app.use(cors({
   origin: process.env.CORS_ORIGIN || 'http://localhost:5173',
   credentials: true,
 }));
-app.use(express.json({ limit: '10mb' }));
+app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true }));
 app.use(requestLogger);
 
@@ -53,6 +55,8 @@ app.use('/api/sleep', authMiddleware, sleepRoutes);
 app.use('/api/statistics', authMiddleware, statisticsRoutes);
 app.use('/api/audio', authMiddleware, audioRoutes);
 app.use('/api/generate', authMiddleware, generateRoutes);
+app.use('/api/themes', authMiddleware, themeRoutes);
+app.use('/api/characters', authMiddleware, characterRoutes);
 
 // Error handling
 app.use(errorHandler);

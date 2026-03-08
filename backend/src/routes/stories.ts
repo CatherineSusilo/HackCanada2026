@@ -16,6 +16,7 @@ const createStorySchema = z.object({
   initialDriftScore: z.number().int().min(0).max(100),
   imagePrompts: z.any().optional(),
   generatedImages: z.array(z.string()).optional(),
+  interactions: z.any().optional(),
   modelUsed: z.string().optional(),
 });
 
@@ -28,6 +29,7 @@ const updateStorySchema = z.object({
   finalDriftScore: z.number().int().min(0).max(100).optional(),
   driftScoreHistory: z.array(z.number().int()).optional(),
   vitalsHistory: z.any().optional(),
+  interactions: z.any().optional(),
 });
 
 // Get all story sessions for a child
@@ -166,6 +168,7 @@ router.post('/', async (req: AuthRequest, res) => {
         initialDriftScore: body.initialDriftScore,
         imagePrompts: body.imagePrompts,
         generatedImages: body.generatedImages || [],
+        interactions: body.interactions || [],
         modelUsed: body.modelUsed,
         driftScoreHistory: [body.initialDriftScore],
       },
@@ -222,6 +225,7 @@ router.patch('/:storyId', async (req: AuthRequest, res) => {
         finalDriftScore: body.finalDriftScore,
         driftScoreHistory: body.driftScoreHistory,
         vitalsHistory: body.vitalsHistory,
+        interactions: body.interactions,
       },
     });
 
@@ -229,6 +233,43 @@ router.patch('/:storyId', async (req: AuthRequest, res) => {
   } catch (error) {
     console.error('Update story error:', error);
     res.status(500).json({ error: 'Failed to update story session' });
+  }
+});
+
+// Save a single interaction response (called during story playback)
+router.patch('/:storyId/interaction', async (req: AuthRequest, res) => {
+  try {
+    const auth0Id = req.auth?.payload?.sub;
+    const { storyId } = req.params;
+    const { interactionId, response } = req.body;
+
+    if (!auth0Id) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    const user = await prisma.user.findUnique({ where: { auth0Id } });
+    if (!user) return res.status(404).json({ error: 'User not found' });
+
+    const story = await prisma.storySession.findFirst({
+      where: { id: storyId, child: { userId: user.id } },
+    });
+
+    if (!story) return res.status(404).json({ error: 'Story not found' });
+
+    const interactions = (story.interactions as any[]) || [];
+    const updated = interactions.map((i: any) =>
+      i.id === interactionId ? { ...i, response: { ...response, respondedAt: new Date().toISOString() } } : i
+    );
+
+    const result = await prisma.storySession.update({
+      where: { id: storyId },
+      data: { interactions: updated },
+    });
+
+    res.json(result);
+  } catch (error) {
+    console.error('Save interaction error:', error);
+    res.status(500).json({ error: 'Failed to save interaction' });
   }
 });
 

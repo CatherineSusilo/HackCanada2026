@@ -19,7 +19,23 @@ model User {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  children Child[]
+  children    Child[]
+  storyThemes StoryTheme[]
+  characters  Character[]
+}
+
+model StoryTheme {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId      String   @db.ObjectId
+  name        String
+  description String
+  icon        String   @default("📖")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
 }
 
 model Child {
@@ -77,6 +93,11 @@ model StorySession {
   generatedImages   String[]
   vitalsHistory     Json?
 
+  // Interactive learning elements embedded in the story
+  // Array of { id, type, paragraphIndex, prompt, options?, correctAnswer?, bridgeTexts?, response? }
+  interactions      Json?
+
+  characterIds      String[] @db.ObjectId
   modelUsed         String?
   
   createdAt         DateTime @default(now())
@@ -86,6 +107,25 @@ model StorySession {
 
   @@index([childId])
   @@index([startTime])
+}
+
+model Character {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId      String   @db.ObjectId
+  name        String
+  description String
+  personality String   @default("")
+  icon        String   @default("🧸")
+  voiceId     String?
+  voiceName   String?
+  storyIds    String[] @db.ObjectId
+  totalStories Int     @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
 }
 
 model SleepSession {

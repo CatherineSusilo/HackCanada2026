@@ -6,9 +6,11 @@ import { ResponsiveContainer, Area, AreaChart, CartesianGrid, XAxis, YAxis } fro
 interface SummaryScreenProps {
   summary: StorySummary;
   onStartOver: () => void;
+  onNextStory?: () => void;
+  hasNextTheme?: boolean;
 }
 
-export function SummaryScreen({ summary, onStartOver }: SummaryScreenProps) {
+export function SummaryScreen({ summary, onStartOver, onNextStory, hasNextTheme }: SummaryScreenProps) {
   const chartData = summary.driftCurve.map((score, index) => ({
     time: index,
     score: Math.round(score),
@@ -181,7 +183,32 @@ export function SummaryScreen({ summary, onStartOver }: SummaryScreenProps) {
             </div>
           </div>
 
-          <div style={{ paddingTop: '24px', borderTop: '1px solid rgba(40, 30, 20, 0.2)' }}>
+          <div className="space-y-3" style={{ paddingTop: '24px', borderTop: '1px solid rgba(40, 30, 20, 0.2)' }}>
+            {hasNextTheme && onNextStory && (
+              <button
+                onClick={onNextStory}
+                className="w-full px-6 py-4 font-bold transition-all flex items-center justify-center gap-2 cursor-pointer rounded-xl"
+                style={{
+                  fontFamily: "'Indie Flower', cursive",
+                  fontSize: '22px',
+                  color: 'rgba(250, 245, 240, 0.98)',
+                  background: 'linear-gradient(135deg, rgba(140, 100, 60, 0.85) 0%, rgba(120, 85, 50, 0.9) 100%)',
+                  border: '3px solid rgba(160, 120, 80, 0.6)',
+                  boxShadow: '0 6px 20px rgba(100, 70, 40, 0.35), inset 0 1px 2px rgba(255, 255, 255, 0.2)',
+                  textShadow: '0 2px 4px rgba(0, 0, 0, 0.3)',
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = 'linear-gradient(135deg, rgba(160, 115, 70, 0.9) 0%, rgba(135, 95, 60, 0.95) 100%)';
+                  e.currentTarget.style.transform = 'translateY(-2px)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = 'linear-gradient(135deg, rgba(140, 100, 60, 0.85) 0%, rgba(120, 85, 50, 0.9) 100%)';
+                  e.currentTarget.style.transform = 'translateY(0)';
+                }}
+              >
+                ✨ next adventure ✨
+              </button>
+            )}
             <button
               onClick={onStartOver}
               className="w-full px-6 py-4 font-bold transition-all flex items-center justify-center gap-2 cursor-pointer"

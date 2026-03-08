@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
   Menu, X, Users, BookOpen, Image,
-  BarChart3, Settings, Palette, ChevronRight 
+  BarChart3, Settings, Palette, ChevronRight, Drama 
 } from 'lucide-react';
 
 export type SidebarView = 
@@ -11,6 +11,7 @@ export type SidebarView =
   | 'archive' 
   | 'drawings' 
   | 'themes'
+  | 'characters'
   | 'ai-settings';
 
 interface SidebarProps {
@@ -24,6 +25,7 @@ const menuItems = [
   { id: 'archive' as SidebarView, icon: BookOpen, label: 'story archive' },
   { id: 'drawings' as SidebarView, icon: Image, label: 'drawings' },
   { id: 'themes' as SidebarView, icon: Palette, label: 'story themes' },
+  { id: 'characters' as SidebarView, icon: Drama, label: 'characters' },
   { id: 'ai-settings' as SidebarView, icon: Settings, label: 'ai settings' },
 ];
 
