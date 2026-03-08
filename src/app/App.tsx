@@ -14,8 +14,19 @@ import { StoryArchive } from './components/StoryArchive';
 import { DrawingsManager } from './components/DrawingsManager';
 import { StoryThemes } from './components/StoryThemes';
 import { AISettings } from './components/AISettings';
+import { CharacterManager } from './components/CharacterManager';
+import { getNextTheme } from './data/roadmapThemes';
 
 export type AppState = 'dashboard' | 'onboarding' | 'roadmap' | 'setup' | 'story' | 'summary';
+
+export interface StoryCharacter {
+  id: string;
+  name: string;
+  description: string;
+  personality: string;
+  icon: string;
+  voiceId?: string;
+}
 
 export interface ChildProfile {
   childId: string;
@@ -25,7 +36,11 @@ export interface ChildProfile {
   parentPrompt: string;
   uploadedImages: File[];
   initialState: 'wound-up' | 'normal' | 'almost-there';
+  interactionFrequency: 'none' | 'every' | 'every3' | 'every5';
+  storyLength: 'short' | 'medium' | 'long';
+  characters: StoryCharacter[];
   generatedStory?: string;
+  interactions?: any[];
 }
 
 export interface StorySummary {
@@ -110,8 +125,8 @@ export default function App() {
 
   const handleSidebarViewChange = (view: SidebarView) => {
     setSidebarView(view);
+    setAppState('dashboard');
     if (view === 'dashboard') {
-      setAppState('dashboard');
       setSelectedChild(null);
       setStoryConfig(null);
     }
@@ -133,6 +148,21 @@ export default function App() {
   const handleVoiceSettings = () => {
     setSidebarView('ai-settings');
     setAppState('dashboard');
+  };
+
+  const handleNextStory = () => {
+    if (!storyConfig) return;
+    const next = getNextTheme(storyConfig.theme);
+    if (next) {
+      setStoryConfig({
+        ...storyConfig,
+        theme: next.title,
+        themeDescription: next.theme,
+      });
+      setAppState('setup');
+    } else {
+      handleBackToDashboard();
+    }
   };
 
   // Loading state
@@ -167,26 +197,60 @@ export default function App() {
 
   // Main app (authenticated)
   // Full-screen story/summary views
+  const handleSetupNavigate = (view: string) => {
+    setSidebarView(view as SidebarView);
+    setAppState('dashboard');
+  };
+
+  const handleReplayStory = (story: any) => {
+    const profile: ChildProfile = {
+      childId: story.childId,
+      name: story.childName || 'Child',
+      age: story.childAge || 5,
+      storytellingTone: story.storytellingTone || 'calming',
+      parentPrompt: story.parentPrompt || '',
+      uploadedImages: [],
+      initialState: 'normal',
+      interactionFrequency: 'none',
+      storyLength: 'medium',
+      characters: [],
+      generatedStory: story.storyContent,
+      interactions: story.interactions || [],
+    };
+    setChildProfile(profile);
+    setAppState('story');
+  };
+
   if (appState === 'setup') {
-    return <SetupScreen onStart={handleConfigureStory} onVoiceSettings={handleVoiceSettings} prefilledConfig={storyConfig} onBack={handleBackToDashboard} />;
+    return (
+      <>
+        <Sidebar currentView={sidebarView} onViewChange={handleSidebarViewChange} />
+        <SetupScreen onStart={handleConfigureStory} onVoiceSettings={handleVoiceSettings} prefilledConfig={storyConfig} onBack={handleBackToRoadmap} onNavigate={handleSetupNavigate} />
+      </>
+    );
   }
 
   if (appState === 'roadmap' && selectedChild) {
-    return <StoryRoadmap child={selectedChild} onStartStory={handleStartStory} onBack={handleBackToDashboard} />;
+    return (
+      <>
+        <Sidebar currentView={sidebarView} onViewChange={handleSidebarViewChange} />
+        <StoryRoadmap child={selectedChild} onStartStory={handleStartStory} onBack={handleBackToDashboard} />
+      </>
+    );
   }
 
   if (appState === 'story' && childProfile) {
-    return <StoryScreen profile={childProfile} onComplete={handleStoryComplete} />;
+    return <StoryScreen profile={childProfile} onComplete={handleStoryComplete} onExit={handleBackToDashboard} />;
   }
 
   if (appState === 'summary' && storySummary) {
-    return <SummaryScreen summary={storySummary} onStartOver={handleBackToDashboard} />;
+    return <SummaryScreen summary={storySummary} onStartOver={handleBackToDashboard} onNextStory={handleNextStory} hasNextTheme={!!storyConfig && !!getNextTheme(storyConfig.theme)} />;
   }
 
   // Dashboard with sidebar
   return (
     <div className="min-h-full w-full bg-gradient-to-br from-indigo-950 via-purple-900 to-slate-900 flex">
-      <Sidebar view={sidebarView} onViewChange={handleSidebarViewChange} />
+      <Sidebar currentView={sidebarView} onViewChange={handleSidebarViewChange} />
       
       <div className="flex-1 overflow-auto">
         {sidebarView === 'dashboard' && appState === 'dashboard' && (
@@ -197,12 +261,12 @@ export default function App() {
           <ChildOnboarding onComplete={handleOnboardingComplete} />
         )}
         
-        {sidebarView === 'stats' && (
+        {sidebarView === 'statistics' && (
           <BehavioralStats />
         )}
         
         {sidebarView === 'archive' && (
-          <StoryArchive />
+          <StoryArchive onReplay={handleReplayStory} />
         )}
         
         {sidebarView === 'drawings' && (
@@ -211,6 +275,10 @@ export default function App() {
         
         {sidebarView === 'themes' && (
           <StoryThemes />
+        )}
+        
+        {sidebarView === 'characters' && (
+          <CharacterManager />
         )}
         
         {sidebarView === 'ai-settings' && (
