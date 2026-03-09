@@ -7,17 +7,21 @@ struct ContentView: View {
     @State private var cameraGranted = false
 
     init() {
-        SmartSpectraSwiftSDK.shared.setApiKey("BGvdA0lLfe70oLSvugIs31tIzrGU6KqI8Q5wG5lj")
+        SmartSpectraSwiftSDK.shared.setApiKey("SocVS7PERqaoga9K1NRQH1i7yOFE1DNc66GGqN7S")
     }
-
-    var body: some View {
+var body: some View {
         ZStack {
             Color.black.edgesIgnoringSafeArea(.all)
 
             // Camera runs invisibly — opacity 0, no visible UI
+//            SmartSpectraView()
+//                .edgesIgnoringSafeArea(.all)
+//                .opacity(0)
             SmartSpectraView()
-                .edgesIgnoringSafeArea(.all)
-                .opacity(0)
+                .frame(width: 120, height: 160)
+                .cornerRadius(12)
+                .shadow(radius: 6)
+                .padding()
         }
         .onAppear {
             requestCameraAccess()

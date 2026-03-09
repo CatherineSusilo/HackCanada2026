@@ -93,7 +93,10 @@ export function LoginScreen() {
           </button>
 
           <button
-            onClick={() => loginWithRedirect({ appState: { returnTo: '/' } })}
+            onClick={() => loginWithRedirect({
+              appState: { returnTo: '/' },
+              authorizationParams: { connection: 'google-oauth2' }
+            })}
             className="w-full py-3.5 transition-all cursor-pointer hover:shadow-lg"
             style={{
               fontFamily: "'Patrick Hand', cursive",

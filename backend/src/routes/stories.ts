@@ -245,7 +245,7 @@ router.patch('/:storyId', async (req: AuthRequest, res) => {
       },
     });
 
-    if (body.completed && existingStory.characterIds?.length > 0 && body.finalDriftScore != null && body.initialDriftScore != null) {
+    if (body.completed && existingStory.characterIds?.length > 0 && body.finalDriftScore != null) {
       const storyEngagement = Math.min(100, Math.max(0, body.finalDriftScore - existingStory.initialDriftScore));
       for (const charId of existingStory.characterIds) {
         try {
